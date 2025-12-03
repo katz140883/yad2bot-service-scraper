@@ -15,8 +15,8 @@ class BonusManager:
     """Manage bonus system for users"""
     
     # Sticker IDs
-    SIGNUP_BONUS_STICKER = "CAACAgIAAxkBAAEPg0Ro4XScbBBSmXJJNNN-ZKOY4IcC-QAChwwAAvLaKEskd9-ZMiZZ4TYE"
-    DAILY_BONUS_STICKER = "CAACAgIAAxkBAAEPgzho4XQtH7ltIiSriv8OH-lLxlGm7QACfQwAAsoPQEpP5RyRY3qVajYE"
+    SIGNUP_BONUS_STICKER = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
+    DAILY_BONUS_STICKER = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
     
     # Bonus amounts
     SIGNUP_BONUS_AMOUNT = 100.0
@@ -150,7 +150,7 @@ class BonusManager:
         """Send timer message when daily bonus is not yet available"""
         try:
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPlOFo8QAB9eiRVF_TreGZPGminqWTa04AAgYPAAIpzshKiB0rqCdPNu02BA"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.effective_chat.id,
                 sticker=sticker_id
@@ -300,7 +300,7 @@ class BonusManager:
             user_id = update.effective_user.id
             
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPg41o4a2fIidHOck8vFsi7Ov3xDT4tAACFgADFm5MEoPbc3O3-IjONgQ"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.effective_chat.id,
                 sticker=sticker_id

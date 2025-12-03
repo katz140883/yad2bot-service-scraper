@@ -50,7 +50,7 @@ class BotHandlers:
             db.add_user(user_id, user_name)
             
             # Send sticker
-            sticker_id = "CAACAgIAAxkBAAEPkSlo7Xlpxqu7iCpzKGH17x8fJmjf2wACIAADFm5MEtb1q4m17AnENgQ"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(chat_id=update.message.chat_id, sticker=sticker_id)
             
             # Send CRM welcome message
@@ -514,7 +514,7 @@ class BotHandlers:
 בואו נתחיל! בחר פעולה מהתפריט:"""
         
         # Send sticker
-        sticker_id = "CAACAgIAAxkBAAEPhfZo4qzrNcKoPlkavNe244jclxlX6wACsQoAAv3GqUrCleapCKIvyTYE"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
         
         # Send welcome message
@@ -576,7 +576,7 @@ class BotHandlers:
         """Handle scraper menu"""
         if not await check_channel_membership(context, update.effective_user.id):
             # Send sticker before channel join message
-            sticker_id = "CAACAgIAAxkBAAEPXrNoxho7_3NlN0pZ_mfwa1ASS94VrAAC4U0AAip8WEuQXJX2KNnfgDYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             
             # Check if it's from callback query or direct command
             if update.callback_query:
@@ -593,7 +593,7 @@ class BotHandlers:
             return
         
         # Send sticker first
-        sticker_id = "CAACAgIAAxkBAAEPlKBo8NN8ZBAIhTokGoY8S10OR-7ObwACBgADFm5MEiW98d0i-mCCNgQ"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         
         # Check if it's from callback query or direct command
         if update.callback_query:
@@ -608,7 +608,7 @@ class BotHandlers:
         """Handle WhatsApp menu"""
         if not await check_channel_membership(context, update.effective_user.id):
             # Send sticker before channel join message
-            sticker_id = "CAACAgIAAxkBAAEPXrNoxho7_3NlN0pZ_mfwa1ASS94VrAAC4U0AAip8WEuQXJX2KNnfgDYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
             
             await context.bot.send_message(
@@ -618,7 +618,7 @@ class BotHandlers:
             return
         
         # Send sticker first
-        sticker_id = "CAACAgIAAxkBAAEPwWlpE26hL87IMce44rLbqZEWXfU1fgACNAwAAukIiEpXNwEQ-MHmJzYE"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
         
         # Send combined message with menu
@@ -628,7 +628,7 @@ class BotHandlers:
         """Handle auto menu"""
         if not await check_channel_membership(context, update.effective_user.id):
             # Send sticker before channel join message
-            sticker_id = "CAACAgIAAxkBAAEPXrNoxho7_3NlN0pZ_mfwa1ASS94VrAAC4U0AAip8WEuQXJX2KNnfgDYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
             
             await context.bot.send_message(
@@ -638,7 +638,7 @@ class BotHandlers:
             return
         
         # Send sticker first
-        sticker_id = "CAACAgIAAxkBAAEPKElonrxkakvfdzOQ44ZR6gxB8yJGpAACWTcAAiBLWEhyXnPlHntKLjYE"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
         
         # Send combined message with menu
@@ -749,7 +749,7 @@ class BotHandlers:
         """Handle WhatsApp warmer explanation"""
         try:
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPlKJo8NOJLSMjSWA0V9hr4qm91er31QAC7A0AAuYXuEiesWAOv_9-BzYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.callback_query.message.chat_id,
                 sticker=sticker_id
@@ -851,7 +851,7 @@ class BotHandlers:
         """Handle results menu"""
         if not await check_channel_membership(context, update.effective_user.id):
             # Send sticker before channel join message
-            sticker_id = "CAACAgIAAxkBAAEPXrNoxho7_3NlN0pZ_mfwa1ASS94VrAAC4U0AAip8WEuQXJX2KNnfgDYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
             
             await context.bot.send_message(
@@ -861,7 +861,7 @@ class BotHandlers:
             return
         
         # Always send sticker and new message
-        sticker_id = "CAACAgIAAxkBAAEPhfZo4qzrNcKoPlkavNe244jclxlX6wACsQoAAv3GqUrCleapCKIvyTYE"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
         
         keyboard = self.menu_manager.create_results_menu_keyboard(language)
@@ -1449,7 +1449,7 @@ https://telegra.ph/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9E%D7%95%D7%A9---yad
             db.set_user_terms_agreement(user_id, True)
             
             # Send sticker only
-            sticker_id = "CAACAgIAAxkBAAEPkSlo7Xlpxqu7iCpzKGH17x8fJmjf2wACIAADFm5MEtb1q4m17AnENgQ"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
             
             # Send CRM welcome message
@@ -1524,7 +1524,7 @@ https://telegra.ph/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9E%D7%95%D7%A9---yad
         """Handle contact button press from ReplyKeyboard"""
         try:
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPKE1onryELKZe8nT7kHoUDTrYyxULMwACzTIAAtyEWEgs4kVS4Lfk0DYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.message.chat_id,
                 sticker=sticker_id

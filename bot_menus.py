@@ -239,7 +239,7 @@ class MenuManager:
             keyboard = self.create_agents_menu_keyboard(language)
             
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPmKFo9MSpgMPyI1Q4d20_NEMQsFElbwACvw4AArPhWUjrc_pmkJeI1zYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.callback_query.message.chat_id,
                 sticker=sticker_id
@@ -258,7 +258,7 @@ class MenuManager:
         """Send contact menu to user"""
         try:
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPeRBo2wexGJkAAcZEXZdKavgxc_WW5CcAAmAAA9vbfgABhilMzlDh5-E2BA"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.callback_query.message.chat_id,
                 sticker=sticker_id
@@ -667,7 +667,7 @@ async def send_my_account_menu(self, update: Update, context: ContextTypes.DEFAU
     """Send my account menu to user"""
     try:
         # Send sticker first
-        sticker_id = "CAACAgIAAxkBAAEPhfRo4qzIfcCUT4I9nDRuurRPNhSXtQACHgADFm5MEugIOg_PO1U1NgQ"
+        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
         await context.bot.send_sticker(
             chat_id=update.callback_query.message.chat_id,
             sticker=sticker_id

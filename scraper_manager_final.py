@@ -452,7 +452,7 @@ class FinalScraperManager:
             
             # Send success sticker
             try:
-                sticker_id = "CAACAgIAAxkBAAEPwWlpE26hL87IMce44rLbqZEWXfU1fgACNAwAAukIiEpXNwEQ-MHmJzYE"
+                sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
                 await status_message.get_bot().send_sticker(
                     chat_id=status_message.chat_id,
                     sticker=sticker_id

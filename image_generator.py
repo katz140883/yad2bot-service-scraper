@@ -31,7 +31,7 @@ class ImageGenerator:
             user_id = update.effective_user.id
             
             # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEPllZo8oeT6O17yXnEd9OjiS1_Gj9a5AACYQAD29t-AAH39w-bN-rU5DYE"
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
             await context.bot.send_sticker(
                 chat_id=update.callback_query.message.chat_id,
                 sticker=sticker_id
