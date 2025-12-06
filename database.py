@@ -129,9 +129,9 @@ class BotDatabase:
                     pass
                 
                 try:
-                    cursor.execute("ALTER TABLE users ADD COLUMN signup_bonus_claimed BOOLEAN DEFAULT FALSE")
+                    cursor.execute("ALTER TABLE users ADD COLUMN signup_test_claimed BOOLEAN DEFAULT FALSE")
                     conn.commit()
-                    logger.info("Added signup_bonus_claimed column to users table")
+                    logger.info("Added signup_test_claimed column to users table")
                 except sqlite3.OperationalError:
                     pass
                 
@@ -149,11 +149,11 @@ class BotDatabase:
                 except sqlite3.OperationalError:
                     pass
                 
-                # Add last_daily_bonus_at column for daily bonus tracking
+                # Add last_daily_test_at column for daily bonus tracking
                 try:
-                    cursor.execute("ALTER TABLE users ADD COLUMN last_daily_bonus_at TIMESTAMP")
+                    cursor.execute("ALTER TABLE users ADD COLUMN last_daily_test_at TIMESTAMP")
                     conn.commit()
-                    logger.info("Added last_daily_bonus_at column to users table")
+                    logger.info("Added last_daily_test_at column to users table")
                 except sqlite3.OperationalError:
                     pass
                 
@@ -200,7 +200,7 @@ class BotDatabase:
                         user_id INTEGER,
                         transaction_type TEXT, -- 'credit', 'debit'
                         amount REAL,
-                        reason TEXT, -- 'signup_bonus', 'referral_bonus', 'scraping_cost', etc.
+                        reason TEXT, -- 'signup_test', 'referral_test', 'scraping_cost', etc.
                         balance_after REAL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -634,6 +634,12 @@ class BotDatabase:
                         for row in reader:
                             # Only sync if there's a phone number
                             if row.get('phone_number', '').strip():
+                                # Create WhatsApp link
+                                phone = row.get('phone_number', '').strip()
+                                if phone.startswith('0'):
+                                    phone = '972' + phone[1:]  # Convert to international format
+                                row['whatsapp_link'] = f'https://wa.me/{phone}'
+                                
                                 if save_lead_to_mysql(user_id, row, mode, filter_type):
                                     success_count += 1
                                 else:
@@ -749,22 +755,22 @@ class BotDatabase:
             logger.error(f"Error debiting user {user_id}: {e}")
             return False
     
-    def has_claimed_signup_bonus(self, user_id: int) -> bool:
+    def has_claimed_signup_test(self, user_id: int) -> bool:
         """Check if user has already claimed signup bonus"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT signup_bonus_claimed FROM users WHERE user_id = ?', (user_id,))
+                cursor.execute('SELECT signup_test_claimed FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
                 return bool(result[0]) if result and result[0] is not None else False
         except Exception as e:
             logger.error(f"Error checking signup bonus for user {user_id}: {e}")
             return False
     
-    def claim_signup_bonus(self, user_id: int) -> bool:
+    def claim_signup_test(self, user_id: int) -> bool:
         """Claim signup bonus for user"""
         try:
-            if self.has_claimed_signup_bonus(user_id):
+            if self.has_claimed_signup_test(user_id):
                 return False
             
             with sqlite3.connect(self.db_path) as conn:
@@ -773,14 +779,14 @@ class BotDatabase:
                 # Mark bonus as claimed
                 cursor.execute('''
                     UPDATE users 
-                    SET signup_bonus_claimed = TRUE, updated_at = CURRENT_TIMESTAMP 
+                    SET signup_test_claimed = TRUE, updated_at = CURRENT_TIMESTAMP 
                     WHERE user_id = ?
                 ''', (user_id,))
                 
                 conn.commit()
                 
                 # Credit the bonus amount
-                return self.credit_user_account(user_id, 100.0, 'signup_bonus_claim')
+                return self.credit_user_account(user_id, 100.0, 'signup_test_claim')
                 
         except Exception as e:
             logger.error(f"Error claiming signup bonus for user {user_id}: {e}")
@@ -867,12 +873,12 @@ class BotDatabase:
         except Exception as e:
             logger.error(f"Error setting terms agreement: {e}")
     
-    def get_last_daily_bonus_time(self, user_id: int) -> Optional[datetime]:
+    def get_last_daily_test_time(self, user_id: int) -> Optional[datetime]:
         """Get the last time user claimed daily bonus"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT last_daily_bonus_at FROM users WHERE user_id = ?', (user_id,))
+                cursor.execute('SELECT last_daily_test_at FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
                 if result and result[0]:
                     return datetime.fromisoformat(result[0])
@@ -881,23 +887,23 @@ class BotDatabase:
             logger.error(f"Error getting last daily bonus time for user {user_id}: {e}")
             return None
     
-    def claim_daily_bonus(self, user_id: int, amount: float = 50.0) -> bool:
+    def claim_daily_test(self, user_id: int, amount: float = 50.0) -> bool:
         """Claim daily bonus for user"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                # Update last_daily_bonus_at
+                # Update last_daily_test_at
                 cursor.execute('''
                     UPDATE users 
-                    SET last_daily_bonus_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+                    SET last_daily_test_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
                     WHERE user_id = ?
                 ''', (user_id,))
                 
                 conn.commit()
                 
                 # Credit the bonus amount
-                return self.credit_user_account(user_id, amount, 'daily_bonus')
+                return self.credit_user_account(user_id, amount, 'daily_test')
                 
         except Exception as e:
             logger.error(f"Error claiming daily bonus for user {user_id}: {e}")
@@ -1253,6 +1259,35 @@ class BotDatabase:
             return []
 
 
+def check_lead_exists_in_mysql(listing_url: str) -> bool:
+    """
+    Check if a lead with this listing URL already exists in MySQL CRM
+    
+    Args:
+        listing_url: The URL of the listing to check
+    
+    Returns:
+        True if exists, False otherwise
+    """
+    try:
+        connection = pymysql.connect(**MYSQL_CONFIG)
+        cursor = connection.cursor()
+        
+        query = "SELECT COUNT(*) FROM leads WHERE listingUrl = %s"
+        cursor.execute(query, (listing_url,))
+        count = cursor.fetchone()[0]
+        
+        cursor.close()
+        connection.close()
+        
+        return count > 0
+        
+    except Exception as e:
+        logger.error(f"Error checking if lead exists: {e}")
+        # If there's an error, return False to allow the scrape to continue
+        return False
+
+
 def save_lead_to_mysql(telegram_user_id: int, lead_data: Dict, scan_type: str, filter_type: str = 'all') -> bool:
     """
     Save lead to MySQL/TiDB database for CRM
@@ -1261,7 +1296,7 @@ def save_lead_to_mysql(telegram_user_id: int, lead_data: Dict, scan_type: str, f
         telegram_user_id: Telegram user ID
         lead_data: Dictionary with lead info from CSV
         scan_type: 'rent' or 'sale'
-        filter_type: 'today', 'all', or 'bonus'
+        filter_type: 'today', 'all', or 'test'
     
     Returns:
         True if successful, False otherwise
@@ -1276,8 +1311,10 @@ def save_lead_to_mysql(telegram_user_id: int, lead_data: Dict, scan_type: str, f
         # Debug logging
         logger.debug(f"Saving lead to MySQL: phone={lead_data.get('phone_number')}, scan_type={scan_type}, filter_type={filter_type}")
         
+        # Use INSERT IGNORE to skip duplicates based on listingUrl
+        # This prevents duplicate leads from being saved if the same listing is scraped again
         query = """
-        INSERT INTO leads 
+        INSERT IGNORE INTO leads 
         (userId, phoneNumber, contactName, location, rooms, size, floor, price, 
          leadType, filterType, scrapedAt, listingUrl, title, whatsappLink)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s)
@@ -1301,8 +1338,14 @@ def save_lead_to_mysql(telegram_user_id: int, lead_data: Dict, scan_type: str, f
         
         try:
             cursor.execute(query, values)
+            affected_rows = cursor.rowcount
             connection.commit()
-            logger.info(f"Lead saved to MySQL: {lead_data.get('phone_number')} - {scan_type}/{filter_type}")
+            
+            if affected_rows > 0:
+                logger.info(f"✅ Lead saved to MySQL: {lead_data.get('phone_number')} - {scan_type}/{filter_type}")
+            else:
+                logger.info(f"⏭️  Lead already exists (skipped): {lead_data.get('listing_url', 'no-url')}")
+            
             return True
         except Exception as exec_error:
             logger.error(f"Error executing query: {exec_error}")

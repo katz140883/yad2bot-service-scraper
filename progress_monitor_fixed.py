@@ -56,8 +56,8 @@ class FixedProgressMonitor:
             today_str = date.today().strftime('%Y-%m-%d')
             # Search for progress files with both old and new naming patterns
             progress_patterns = [
-                f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today_str}_checking_progress.json",
-                f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today_str}*progress*.json"
+                f"/home/ubuntu/yad2bot_scraper/data/*{today_str}_checking_progress.json",
+                f"/home/ubuntu/yad2bot_scraper/data/*{today_str}*progress*.json"
             ]
             
             # Initial message
@@ -92,15 +92,29 @@ class FixedProgressMonitor:
                         # Create progress message
                         current = progress_data.get('current_listing', 0)
                         found = progress_data.get('found_recent', 0)
+                        duplicates = progress_data.get('duplicates_skipped', 0)
                         title = progress_data.get('current_title', '')
                         current_page = progress_data.get('current_page', 1)
                         total_pages = progress_data.get('total_pages', 10)
                         city_name = progress_data.get('city_name', '')
+                        filter_type = progress_data.get('filter_type', '')
                         
                         if language == 'hebrew':
-                            progress_msg = f"🔍 בודק מודעה {current}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n✅ נמצאו: {found} מודעות מהיום"
+                            # Show 'מהיום' only if filter_type is 'today'
+                            if filter_type == 'today':
+                                progress_msg = f"🔍 בודק מודעה {current}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n✅ נמצאו: {found} מודעות מהיום"
+                            else:
+                                progress_msg = f"🔍 בודק מודעה {current}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n✅ נמצאו: {found} מודעות"
+                            if duplicates > 0:
+                                progress_msg += f"\n⏭️ דולגו: {duplicates} כפילויות"
                         else:
-                            progress_msg = f"🔍 Checking listing {current}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n✅ Found: {found} recent listings"
+                            # Show 'recent' only if filter_type is 'today'
+                            if filter_type == 'today':
+                                progress_msg = f"🔍 Checking listing {current}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n✅ Found: {found} recent listings"
+                            else:
+                                progress_msg = f"🔍 Checking listing {current}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n✅ Found: {found} listings"
+                            if duplicates > 0:
+                                progress_msg += f"\n⏭️ Skipped: {duplicates} duplicates"
                         
                         full_message = f"{selection_info}\n\n{progress_msg}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור את הסריקה" if language == 'hebrew' else f"{selection_info}\n\n{progress_msg}\n\n⏹️ Click cancel button to stop scraping"
                         
@@ -127,7 +141,7 @@ class FixedProgressMonitor:
                 try:
                     from datetime import datetime
                     today = datetime.now().strftime('%Y-%m-%d')
-                    csv_pattern = f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today}*.csv"
+                    csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
                     all_csv_files = glob.glob(csv_pattern)
                     csv_files = [f for f in all_csv_files if '_progress' not in f and '_checking_progress' not in f and '_with_phones' not in f]
                     
@@ -159,7 +173,7 @@ class FixedProgressMonitor:
             
             # Find progress file pattern
             today = datetime.now().strftime('%Y-%m-%d')
-            progress_pattern = f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today}*_progress.json"
+            progress_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_progress.json"
             
             max_wait = 1800  # 30 minutes maximum
             wait_time = 0
@@ -278,7 +292,7 @@ class FixedProgressMonitor:
             logger.info(f"[ProgressMonitor] Waiting for results file for user {user_id}")
             
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern = f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today}*_with_phones.csv"
+            csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_with_phones.csv"
             
             wait_time = 0
             while wait_time < timeout and not self.cancel_flag:

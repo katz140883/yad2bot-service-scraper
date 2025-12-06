@@ -11,10 +11,16 @@ from telegram.ext import ContextTypes
 from database import db
 from bot_menus import MenuManager
 from scraper_manager_final import final_scraper_manager
-from whatsapp_manager import WhatsAppManager
-from bonus_manager import bonus_manager
+# Removed: whatsapp_manager and bonus_manager
 
 logger = logging.getLogger(__name__)
+
+# --- Whitelist: Only authorized users can use the bot ---
+ALLOWED_USER_IDS = [7238791533]  # Add your Telegram ID here
+
+def is_user_authorized(user_id: int) -> bool:
+    """Check if user is in the whitelist"""
+    return user_id in ALLOWED_USER_IDS
 
 # --- Channel join gate (simple version) ---
 
@@ -33,7 +39,7 @@ class BotHandlers:
     def __init__(self):
         self.menu_manager = MenuManager()
         self.scraper_manager = final_scraper_manager  # Use the global final scraper manager
-        self.whatsapp_manager = WhatsAppManager()
+        # Removed: self.whatsapp_manager = WhatsAppManager()
     
     def set_bot_instance(self, bot):
         """Set the bot instance for all managers"""
@@ -45,6 +51,15 @@ class BotHandlers:
         try:
             user_id = update.effective_user.id
             user_name = update.effective_user.first_name or "משתמש"
+            
+            # Check whitelist
+            if not is_user_authorized(user_id):
+                await update.message.reply_text(
+                    "⛔ אין לך הרשאה להשתמש בבוט זה.\n\n"
+                    f"🆔 Telegram ID שלך: {user_id}"
+                )
+                logger.warning(f"Unauthorized access attempt by user {user_id} ({user_name})")
+                return
             
             # Initialize user in database
             db.add_user(user_id, user_name)
@@ -88,6 +103,12 @@ class BotHandlers:
             await query.answer()
             
             user_id = update.effective_user.id
+            
+            # Check whitelist
+            if not is_user_authorized(user_id):
+                await query.edit_message_text("⛔ אין לך הרשאה להשתמש בבוט זה.")
+                return
+            
             callback_data = query.data
             language = db.get_user_language(user_id)
             
@@ -111,8 +132,7 @@ class BotHandlers:
             elif callback_data == 'scraper_sale':
                 await self.menu_manager.send_scraper_sale_menu(update, context)
             
-            elif callback_data == 'whatsapp_menu':
-                await self._handle_whatsapp_menu(update, context)
+            # Removed: whatsapp_menu callback
             
             elif callback_data == 'auto_menu':
                 await self._handle_auto_menu(update, context)
@@ -132,17 +152,10 @@ class BotHandlers:
             elif callback_data == 'my_account':
                 await self._handle_my_account(update, context)
             
-            elif callback_data == 'claim_bonus':
-                await self._handle_claim_bonus(update, context)
+            elif callback_data == 'claim_test':
+                await self._handle_claim_test(update, context)
             
-            elif callback_data == 'claim_signup_bonus':
-                await bonus_manager.claim_signup_bonus(update, context)
-            
-            elif callback_data == 'claim_daily_bonus':
-                await bonus_manager.claim_daily_bonus(update, context)
-            
-            elif callback_data == 'daily_bonus_offer':
-                await bonus_manager.send_daily_bonus_offer(update, context)
+            # Removed: bonus_manager callbacks (claim_signup_test, claim_daily_test, daily_test_offer)
             
             elif callback_data == 'timer_waiting':
                 # Timer button - just answer without action
@@ -155,8 +168,7 @@ class BotHandlers:
             elif callback_data == 'buy_credits':
                 await self._handle_buy_credits(update, context)
             
-            elif callback_data == 'invite_friends':
-                await bonus_manager.send_invite_message(update, context)
+            # Removed: bonus_manager callback (invite_friends)
             
             elif callback_data == 'share_referral':
                 await self._handle_share_referral(update, context)
@@ -273,44 +285,9 @@ class BotHandlers:
             elif callback_data == 'main_menu':
                 await self._handle_show_main_menu(update, context)
             
-            elif callback_data == 'image_gen_menu':
-                await self._handle_image_gen_menu(update, context)
+            # Removed: image_generator callbacks (image_gen_menu, image_gen_text, image_gen_from_image)
             
-            elif callback_data == 'image_gen_text':
-                await self._handle_image_gen_text(update, context)
-            
-            elif callback_data == 'image_gen_from_image':
-                await self._handle_image_gen_from_image(update, context)
-            
-            elif callback_data == 'use_saved_instance':
-                # Get saved instance code from database
-                saved_instance = db.get_user_whatsapp_instance(user_id)
-                if saved_instance:
-                    await self.whatsapp_manager.handle_instance_input(update, context, saved_instance)
-                else:
-                    await query.edit_message_text("לא נמצא קוד שמור. הזן קוד חדש.")
-            
-            elif callback_data == 'send_to_scraped_leads':
-                await self._handle_send_to_scraped_leads(update, context)
-            
-            elif callback_data == 'whatsapp_single_number':
-                await self.whatsapp_manager.handle_single_number_request(update, context)
-            
-            elif callback_data.startswith('single_template_'):
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_template_selection(self.whatsapp_manager, update, context, callback_data)
-            
-            elif callback_data in ['single_ai_yes', 'single_ai_no']:
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_ai_choice(self.whatsapp_manager, update, context, callback_data)
-            
-            elif callback_data in ['use_saved_webhook', 'new_webhook']:
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_webhook_choice(self.whatsapp_manager, update, context, callback_data)
-            
-            elif callback_data == 'webhook_continue':
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_webhook_continue(self.whatsapp_manager, update, context)
+            # Removed: WhatsApp callbacks (use_saved_instance, send_to_scraped_leads, whatsapp_single_number, templates, AI, webhook)
 
             else:
                 logger.warning(f"Unhandled callback data: {callback_data}")
@@ -342,31 +319,10 @@ class BotHandlers:
             # Check if user is waiting for specific input
             waiting_for = db.get_user_waiting_for(user_id)
             
-            if waiting_for == 'whatsapp_instance':
-                await self.whatsapp_manager.handle_instance_input(update, context, text)
-            elif waiting_for == 'whatsapp_token':
-                await self.whatsapp_manager.handle_token_input(update, context, text)
-            elif waiting_for == 'single_phone_number':
-                await self.whatsapp_manager.handle_single_number_input(update, context, text)
-            elif waiting_for == 'single_custom_message':
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_custom_message_input(self.whatsapp_manager, update, context, text)
-            elif waiting_for == 'single_webhook_url':
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_webhook_url_input(self.whatsapp_manager, update, context, text)
-            elif waiting_for == 'single_ai_prompt':
-                import whatsapp_single_number
-                await whatsapp_single_number.handle_ai_prompt_input(self.whatsapp_manager, update, context, text)
-            elif waiting_for and waiting_for.startswith('ai_prompt_'):
+            # Removed: WhatsApp waiting handlers (instance, token, single_number, custom_message, webhook, AI, message_csv)
+            
+            if waiting_for and waiting_for.startswith('ai_prompt_'):
                 await self._handle_ai_prompt_input(update, context, text, waiting_for)
-            elif waiting_for and waiting_for.startswith('whatsapp_message_'):
-                await self._handle_whatsapp_message_input(update, context, text, waiting_for)
-            elif waiting_for == 'whatsapp_message_csv':
-                await self._handle_whatsapp_message_input_csv(update, context, text)
-
-            elif waiting_for == 'image_gen_description':
-                from image_generator import image_generator
-                await image_generator.generate_from_text(update, context, text)
             else:
                 # Default response for unexpected text
                 language = db.get_user_language(user_id)
@@ -385,12 +341,9 @@ class BotHandlers:
             # Check if user is waiting for photo input
             waiting_for = db.get_user_waiting_for(user_id)
             
-            if waiting_for == 'image_gen_photo':
-                from image_generator import image_generator
-                await image_generator.generate_from_image(update, context)
-            else:
-                # Unexpected photo
-                await update.message.reply_text("לא צפוי תמונה כרגע. השתמש בתפריט.")
+            # Removed: image_gen_photo handler
+            # Unexpected photo
+            await update.message.reply_text("לא צפוי תמונה כרגע. השתמש בתפריט.")
                 
         except Exception as e:
             logger.error(f"Error in photo message handler: {e}")
@@ -480,15 +433,6 @@ class BotHandlers:
             logger.error(f"Error handling CSV upload: {e}")
             await update.message.reply_text("❌ שגיאה בעיבוד הקובץ. וודא שהקובץ תקין.")
     
-    async def whatsapp_config_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /whatsapp_config command"""
-        try:
-            await self.whatsapp_manager.handle_config_command(update, context)
-        except Exception as e:
-            logger.error(f"Error in whatsapp config command: {e}")
-            await update.message.reply_text("שגיאה בהגדרת וואטסאפ.")
-    
-    # Private helper methods
     async def _handle_show_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle show main menu without login button"""
         try:
@@ -525,10 +469,6 @@ class BotHandlers:
         
         # Send main menu
         await self._handle_scraper_menu(update, context)
-    
-    async def send_whatsapp_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /send_whatsapp command"""
-        await self._handle_whatsapp_menu(update, context)
     
     async def results_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /results command"""
@@ -603,26 +543,6 @@ class BotHandlers:
         
         # Send combined message with menu
         await self.menu_manager.send_scraper_menu_combined(update, context)
-    
-    async def _handle_whatsapp_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle WhatsApp menu"""
-        if not await check_channel_membership(context, update.effective_user.id):
-            # Send sticker before channel join message
-            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
-            await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
-            
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="כדי להשתמש בבוט צריך קודם להצטרף לערוץ שלנו 👇\n" + CHANNEL_INVITE_URL
-            )
-            return
-        
-        # Send sticker first
-        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
-        await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
-        
-        # Send combined message with menu
-        await self.menu_manager.send_whatsapp_menu_combined(update, context)
     
     async def _handle_auto_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle auto menu"""
@@ -732,53 +652,6 @@ class BotHandlers:
             keyboard = [[InlineKeyboardButton("🔙 חזרה", callback_data="auto_menu")]]
             await update.callback_query.edit_message_text(cancel_text, reply_markup=InlineKeyboardMarkup(keyboard))
     
-    async def _handle_whatsapp_action(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
-        """Handle WhatsApp actions"""
-        if callback_data == 'whatsapp_connect':
-            await self.whatsapp_manager.handle_connect_request(update, context)
-        elif callback_data == 'whatsapp_single_number':
-            await self.whatsapp_manager.handle_single_number_request(update, context)
-        elif callback_data == 'whatsapp_help':
-            await self.whatsapp_manager.handle_help_request(update, context)
-        elif callback_data == 'whatsapp_warmer':
-            await self._handle_whatsapp_warmer(update, context)
-        elif callback_data == 'whatsapp_back':
-            await self._handle_whatsapp_menu(update, context)
-    
-    async def _handle_whatsapp_warmer(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle WhatsApp warmer explanation"""
-        try:
-            # Send sticker first
-            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
-            await context.bot.send_sticker(
-                chat_id=update.callback_query.message.chat_id,
-                sticker=sticker_id
-            )
-            
-            # Send explanation message
-            warmer_text = """**חימום מספר וואטסאפ חדש**
- 
-אם פתחת **מספר וואטסאפ חדש ממש לאחרונה**, חשוב לחמם אותו לפני שתתחיל לשלוח הודעות. 
-
-לחץ על כפתור **"🔥 חימום מספר וואטאפ"**  — שם תוכל לבצע תהליך חימום אוטומטי שיגרום למספר שלך להיראות פעיל ואמין, כך תוכל לשלוח הודעות בבטחה בלי חשש לחסימה."""
-            
-            # Create keyboard with Mini App button and main menu
-            keyboard = [[
-                InlineKeyboardButton("↩️ תפריט ראשי", callback_data='back_to_main'),
-                InlineKeyboardButton("🔥 חימום מספר וואטאפ", web_app=WebAppInfo(url='https://yad2bot.co.il/user?page=warmer'))
-            ]]
-            
-            await context.bot.send_message(
-                chat_id=update.callback_query.message.chat_id,
-                text=warmer_text,
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp warmer: {e}")
-            await update.callback_query.answer("❌ שגיאה בהצגת מידע על חימום")
-    
     async def _handle_see_results(self, update: Update, context: ContextTypes.DEFAULT_TYPE, language: str):
         """Handle see results action"""
         user_id = update.effective_user.id
@@ -876,22 +749,6 @@ class BotHandlers:
             reply_markup=keyboard
         )
     
-    async def _handle_see_whatsapp_results(self, update: Update, context: ContextTypes.DEFAULT_TYPE, language: str):
-        """Handle see WhatsApp results action"""
-        user_id = update.effective_user.id
-        
-        # Get WhatsApp sending history from database
-        # For now, show placeholder message
-        results_text = "📱 תוצאות שליחת הודעות WhatsApp:\n\n" if language == 'hebrew' else "📱 WhatsApp Messages Results:\n\n"
-        results_text += "🚧 תכונה זו בפיתוח\n" if language == 'hebrew' else "🚧 This feature is under development\n"
-        results_text += "בקרוב תוכל לראות כאן:\n" if language == 'hebrew' else "Soon you'll be able to see here:\n"
-        results_text += "• כמות הודעות שנשלחו\n" if language == 'hebrew' else "• Number of messages sent\n"
-        results_text += "• סטטוס שליחה\n" if language == 'hebrew' else "• Sending status\n"
-        results_text += "• תאריכי שליחה\n" if language == 'hebrew' else "• Sending dates\n"
-        
-        keyboard = [[InlineKeyboardButton("🔙 חזרה", callback_data="results_menu")]]
-        await update.callback_query.edit_message_text(results_text, reply_markup=InlineKeyboardMarkup(keyboard))
-
     async def _handle_city_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
         """Handle city selection for scraping"""
         city_map = {
@@ -926,10 +783,13 @@ class BotHandlers:
             # Get stored mode and filter from context, or use defaults
             mode = context.user_data.get('scraper_mode', 'rent')
             filter_type = context.user_data.get('scraper_filter', 'today')
+            page_limit = context.user_data.get('page_limit', None)
             
             # Create disappearing menu effect - edit the message to show selection
             mode_text = 'השכרה' if mode == 'rent' else 'מכירה'
             time_text = 'מהיום' if filter_type == 'today' else 'כל המודעות'
+            if page_limit:
+                time_text = f'כל המודעות ({page_limit} דפים)'
             
             selection_text = f"🏠 {mode_text} - עיר {city_name}\n📅 מודעות {time_text}\n\n🔍 מתחיל סריקת לידים חמים באזור {city_name}..."
             await update.callback_query.edit_message_text(selection_text)
@@ -943,7 +803,8 @@ class BotHandlers:
                 context,
                 mode,
                 filter_type,
-                city_code
+                city_code,
+                page_limit=page_limit
             )
 
     async def _handle_cancel_scraping(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str = None):
@@ -990,10 +851,18 @@ class BotHandlers:
         logger.info(f"City selection menu called with: {callback_data}")
         
         # Extract mode and filter from callback_data
-        # Format: city_selection_rent_today, city_selection_rent_all, city_selection_rent_bonus, etc.
+        # Format: city_selection_rent_today, city_selection_rent_all, city_selection_rent_test, city_selection_rent_pages_25, etc.
         parts = callback_data.split('_')
         mode = parts[2]  # rent or sale
-        filter_type = parts[3]  # today, all, or bonus
+        
+        # Check if this is a pages selection
+        if len(parts) > 4 and parts[3] == 'pages':
+            filter_type = 'all'  # Pages selections are treated as 'all' mode
+            page_limit = int(parts[4])  # 25, 50, 100, or 200
+            context.user_data['page_limit'] = page_limit
+        else:
+            filter_type = parts[3]  # today, all, or test
+            context.user_data['page_limit'] = None  # No limit
         
         logger.info(f"Extracted mode: {mode}, filter: {filter_type}")
         
@@ -1001,49 +870,28 @@ class BotHandlers:
         context.user_data['scraper_mode'] = mode
         context.user_data['scraper_filter'] = filter_type
         
+        # Prepare summary text
+        mode_text = "להשכרה" if mode == "rent" else "למכירה"
+        filter_text_map = {
+            "today": "מודעות חדשות",
+            "all": "כל המודעות",
+            "test": "בדיקה"
+        }
+        filter_text = filter_text_map.get(filter_type, filter_type)
+        
+        # Add page limit info if exists
+        page_limit = context.user_data.get('page_limit')
+        if page_limit:
+            filter_text = f"כל המודעות ({page_limit} דפים)"
+        
+        summary_text = f"בחרת לבצע:\nסוג מודעות: {mode_text}\nסוג סריקה: {filter_text}\n\n"
+        
         # Send city selection keyboard - edit the previous message instead of sending new one
         keyboard = self.menu_manager.create_city_selection_keyboard()
         await update.callback_query.edit_message_text(
-            text="🏙️ בחר עיר מהרשימה כדי להתחיל מיד בסריקת המודעות\n\n📞 מטרת הסריקה היא לשלוף עבורך את מספרי הטלפון של בעלי הדירות",
+            text=summary_text + "🏙️ בחר עיר מהרשימה כדי להתחיל מיד בסריקת המודעות",
             reply_markup=keyboard
         )
-    
-    async def _handle_whatsapp_send_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str, language: str):
-        """Handle WhatsApp send selection"""
-        try:
-            user_id = update.effective_user.id
-            result_id = callback_data.replace('whatsapp_send_', '')
-            
-            # Get the selected result
-            results = db.get_user_results(user_id, limit=10)
-            selected_result = None
-            for result in results:
-                if str(result['id']) == result_id:
-                    selected_result = result
-                    break
-            
-            if not selected_result:
-                await update.callback_query.edit_message_text("❌ תוצאה לא נמצאה")
-                return
-            
-            # Ask for message content
-            message_text = f"✅ נבחרו {selected_result['phone_numbers_count']} מספרי טלפון לשליחת הודעות וואטסאפ \n\n💬 כתוב את תוכן ההודעה שברצונך לשלוח ללידים, או בחר אחת מההודעות השמורות מהרשימה מטה 👇\n\nההודעה תישלח באופן אוטומטי לכל המספרים שנבחרו."
-            
-            # Set user state to waiting for message
-            db.set_user_waiting_for(user_id, f'whatsapp_message_{result_id}')
-            
-            keyboard = [
-                [InlineKeyboardButton("💬 היי בקשר למודעה האם יש אופציה...", callback_data=f"msg_template_1_{result_id}")],
-                [InlineKeyboardButton("💬 שלום! בקשר לדירה, יש לי מספר לקוחות...", callback_data=f"msg_template_2_{result_id}")],
-                [InlineKeyboardButton("❌ ביטול", callback_data="back_to_main")]
-            ]
-            await update.callback_query.edit_message_text(
-                message_text,
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp send selection: {e}")
     
     async def _handle_message_template(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
         """Handle message template button click"""
@@ -1078,112 +926,8 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Error handling message template: {e}")
     
-    async def _handle_whatsapp_message_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str, waiting_for: str):
-        """Handle WhatsApp message content input"""
-        try:
-            user_id = update.effective_user.id
-            result_id = waiting_for.replace('whatsapp_message_', '')
-            
-            # Clear waiting state
-            db.set_user_waiting_for(user_id, None)
-            
-            # Get the selected result and phone numbers
-            results = db.get_user_results(user_id, limit=10)
-            selected_result = None
-            for result in results:
-                if str(result['id']) == result_id:
-                    selected_result = result
-                    break
-            
-            if not selected_result:
-                await update.message.reply_text("❌ תוצאה לא נמצאה")
-                return
-            
-            # Get phone numbers from CSV file
-            csv_file = selected_result['csv_file_path']
-            if not csv_file or not os.path.exists(csv_file):
-                await update.message.reply_text("❌ קובץ התוצאות לא נמצא")
-                return
-            
-            # Read phone numbers from CSV
-            phone_numbers = []
-            try:
-                import csv
-                with open(csv_file, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        if 'phone_number' in row and row['phone_number']:
-                            phone_numbers.append(row['phone_number'])
-            except Exception as e:
-                logger.error(f"Error reading CSV file: {e}")
-                await update.message.reply_text("❌ שגיאה בקריאת קובץ התוצאות")
-                return
-            
-            if not phone_numbers:
-                await update.message.reply_text("❌ לא נמצאו מספרי טלפון בקובץ")
-                return
-            
-            # Store message for confirmation
-            context.user_data['pending_message'] = {
-                'result_id': result_id,
-                'phone_numbers': phone_numbers,
-                'message_text': message_text
-            }
-            
-            # Show confirmation screen
-            confirm_text = f"📊 **סיכום שליחה**\n\n"
-            confirm_text += f"📞 **מספר לידים:** {len(phone_numbers)}\n"
-            confirm_text += f"💬 **תוכן ההודעה:**\n{message_text}\n\n"
-            confirm_text += "✅ לחץ על 'שגר הודעות' כדי להתחיל את השליחה"
-            
-            keyboard = [
-                [InlineKeyboardButton("🚀 שגר הודעות", callback_data=f"confirm_send_{result_id}")],
-                [InlineKeyboardButton("❌ ביטול", callback_data="back_to_main")]
-            ]
-            await update.message.reply_text(confirm_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp message input: {e}")
-            await update.message.reply_text("❌ שגיאה בשליחת ההודעות")
-    
-    async def _handle_whatsapp_message_input_csv(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
-        """Handle WhatsApp message content input for CSV uploaded files"""
-        try:
-            user_id = update.effective_user.id
-            
-            # Clear waiting state
-            db.set_user_waiting_for(user_id, None)
-            
-            # Get phone numbers from context
-            phone_numbers = context.user_data.get('csv_phone_numbers', [])
-            
-            if not phone_numbers:
-                await update.message.reply_text("❌ לא נמצאו מספרי טלפון")
-                return
-            
-            # Store message for confirmation
-            context.user_data['pending_message'] = {
-                'result_id': 'csv',
-                'phone_numbers': phone_numbers,
-                'message_text': message_text
-            }
-            
-            # Show confirmation screen
-            confirm_text = f"📊 **סיכום שליחה**\n\n"
-            confirm_text += f"📞 **מספר לידים:** {len(phone_numbers)}\n"
-            confirm_text += f"💬 **תוכן ההודעה:**\n{message_text}\n\n"
-            confirm_text += "✅ לחץ על 'שגר הודעות' כדי להתחיל את השליחה"
-            
-            keyboard = [
-                [InlineKeyboardButton("🚀 שגר הודעות", callback_data="confirm_send_csv")],
-                [InlineKeyboardButton("❌ ביטול", callback_data="back_to_main")]
-            ]
-            await update.message.reply_text(confirm_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-            
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp message input from CSV: {e}")
-            await update.message.reply_text("❌ שגיאה בשליחת ההודעות")
-    
-    async def _handle_confirm_send(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
+    # Removed: _handle_confirm_send (WhatsApp)
+    async def _removed_handle_confirm_send(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
         """Handle confirmation to send WhatsApp messages"""
         try:
             user_id = update.effective_user.id
@@ -1204,7 +948,7 @@ class BotHandlers:
             await update.callback_query.edit_message_text(progress_text, reply_markup=InlineKeyboardMarkup(keyboard))
             
             # Send WhatsApp messages
-            result = await self.whatsapp_manager.send_whatsapp_messages(user_id, phone_numbers, message_text)
+            # Removed: result = await self.whatsapp_manager.send_whatsapp_messages(user_id, phone_numbers, message_text)
             
             if result['success']:
                 results_data = result['results']
@@ -1248,76 +992,6 @@ class BotHandlers:
             logger.error(f"Error handling confirm send: {e}")
             await update.callback_query.answer("❌ שגיאה בשליחת ההודעות")
 
-    async def _handle_show_whatsapp_links(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle show WhatsApp links action"""
-        user_id = update.effective_user.id
-        logger.info(f"[DEBUG] _handle_show_whatsapp_links called for user {user_id}")
-        
-        results = db.get_user_results(user_id, limit=1)
-        
-        if results:
-            latest_result = results[0]
-            csv_file = latest_result['csv_file_path']
-            logger.info(f"[DEBUG] CSV file path: '{csv_file}'")
-            
-            # Check if csv_file path is valid
-            if not csv_file or not csv_file.strip():
-                logger.warning(f"Empty CSV file path for user {user_id}")
-                await update.callback_query.edit_message_text("❌ לא נמצא קובץ תוצאות")
-                return
-            
-            if os.path.exists(csv_file):
-                try:
-                    # Read CSV file and extract phone numbers
-                    import csv
-                    phone_links = []
-                    
-                    with open(csv_file, 'r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            phone = row.get('phone_number', '').strip()
-                            if phone and phone != '0' and len(phone) >= 9:
-                                # Clean phone number (remove spaces, dashes, etc.)
-                                clean_phone = ''.join(filter(str.isdigit, phone))
-                                if clean_phone.startswith('0'):
-                                    clean_phone = '972' + clean_phone[1:]  # Convert to international format
-                                elif not clean_phone.startswith('972'):
-                                    clean_phone = '972' + clean_phone
-                                
-                                whatsapp_link = f"https://wa.me/{clean_phone}"
-                                phone_links.append(f"📱 {phone}: {whatsapp_link}")
-                    
-                    logger.info(f"[DEBUG] Generated {len(phone_links)} WhatsApp links")
-                    
-                    if phone_links:
-                        # Split into chunks of 13 phones per message
-                        chunk_size = 13
-                        for i in range(0, len(phone_links), chunk_size):
-                            chunk = phone_links[i:i+chunk_size]
-                            phones_text = f"📱 קישורי וואטסאפ ({len(chunk)} מספרים):\n\n"
-                            phones_text += '\n'.join(chunk)
-                            
-                            await context.bot.send_message(
-                                chat_id=update.callback_query.message.chat_id,
-                                text=phones_text,
-                                disable_web_page_preview=True
-                            )
-                        
-                        # Done - no extra messages
-                        logger.info(f"[DEBUG] WhatsApp links sent successfully")
-                    else:
-                        logger.warning(f"[DEBUG] No valid phone numbers found in CSV")
-                        await update.callback_query.edit_message_text("❌ לא נמצאו מספרי טלפון תקינים")
-                except Exception as e:
-                    logger.error(f"Error processing CSV file for WhatsApp links: {e}")
-                    await update.callback_query.edit_message_text("❌ שגיאה בעיבוד קובץ התוצאות")
-            else:
-                logger.warning(f"[DEBUG] CSV file does not exist: {csv_file}")
-                await update.callback_query.edit_message_text("❌ קובץ התוצאות לא נמצא")
-        else:
-            logger.warning(f"[DEBUG] No results found for user {user_id}")
-            await update.callback_query.edit_message_text("❌ לא נמצאו תוצאות")
-
     async def _handle_cancel_sending(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
         """Handle cancel sending button"""
         try:
@@ -1331,7 +1005,7 @@ class BotHandlers:
                 return
             
             # Cancel the sending process
-            cancelled = self.whatsapp_manager.cancel_current_sending(user_id)
+            # Removed: cancelled = self.whatsapp_manager.cancel_current_sending(user_id)
             
             if cancelled:
                 await update.callback_query.answer("🛑 שליחת ההודעות בוטלה")
@@ -1345,71 +1019,6 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Error handling cancel sending: {e}")
             await update.callback_query.answer("❌ שגיאה בביטול השליחה")
-
-    async def _handle_show_whatsapp_from_scraper(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
-        """Handle showing WhatsApp links from scraper results"""
-        try:
-            # Parse callback data: show_whatsapp_{user_id}_{count}
-            parts = callback_data.split('_')
-            user_id = int(parts[2])
-            count = int(parts[3])
-            
-            # Security check
-            if update.effective_user.id != user_id:
-                await update.callback_query.answer("❌ לא ניתן לגשת לתוצאות של משתמש אחר")
-                return
-            
-            # Find the latest WhatsApp data file
-            from datetime import datetime
-            import glob
-            import json
-            
-            today = datetime.now().strftime('%Y-%m-%d')
-            data_pattern = f"/home/ubuntu/yad2bot_new_token/war_yad2bot/data/*{today}*_whatsapp_data.json"
-            data_files = glob.glob(data_pattern)
-            
-            if not data_files:
-                await update.callback_query.edit_message_text("❌ לא נמצאו נתוני קישורי WhatsApp")
-                return
-            
-            # Get the latest file
-            latest_file = max(data_files, key=os.path.getctime)
-            
-            # Read WhatsApp links data
-            with open(latest_file, 'r', encoding='utf-8') as f:
-                whatsapp_links = json.load(f)
-            
-            if not whatsapp_links:
-                await update.callback_query.edit_message_text("❌ לא נמצאו מספרי טלפון תקינים")
-                return
-            
-            # Edit the original message first
-            await update.callback_query.edit_message_text("⏳ מכין קישורי WhatsApp...")
-            
-            # Split into chunks of 13 phones per message (like in the image)
-            chunk_size = 13
-            for i in range(0, len(whatsapp_links), chunk_size):
-                chunk = whatsapp_links[i:i+chunk_size]
-                
-                # Format message like in the image
-                phones_text = f"📱 קישורי וואטסאפ ({len(chunk)} מספרים):\n\n"
-                
-                for item in chunk:
-                    phone = item['phone']
-                    link = item['link']
-                    phones_text += f"📱 {phone}: {link}\n"
-                
-                await context.bot.send_message(
-                    chat_id=update.callback_query.message.chat_id,
-                    text=phones_text,
-                    disable_web_page_preview=True
-                )
-            
-            logger.info(f"Sent WhatsApp links for {len(whatsapp_links)} phones to user {user_id}")
-            
-        except Exception as e:
-            logger.error(f"Error showing WhatsApp links from scraper: {e}")
-            await update.callback_query.answer("❌ שגיאה בהצגת קישורי WhatsApp")
 
     async def _send_terms_of_service(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_name: str):
         """Send terms of service message"""
@@ -1478,9 +1087,7 @@ https://telegra.ph/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9E%D7%95%D7%A9---yad
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             
-            # Send signup bonus offer if not claimed
-            if not db.has_claimed_signup_bonus(user_id):
-                await bonus_manager.send_signup_bonus_offer(update, context)
+            # Removed: bonus_manager signup offer
             
             logger.info(f"User {user_id} agreed to terms of service")
             
@@ -1600,18 +1207,18 @@ https://telegra.ph/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9E%D7%95%D7%A9---yad
             logger.error(f"Error handling my account: {e}")
             await update.callback_query.answer("❌ שגיאה בטעינת החשבון")
     
-    async def _handle_claim_bonus(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def _handle_claim_test(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle claim bonus action"""
         try:
             user_id = update.effective_user.id
             
             # Check if already claimed
-            if db.has_claimed_signup_bonus(user_id):
+            if db.has_claimed_signup_test(user_id):
                 await update.callback_query.answer("ℹ️ כבר ניצלת את הבונוס שלך.\nניתן לצבור קרדיטים נוספים על ידי הזמנת חברים.", show_alert=True)
                 return
             
             # Claim the bonus
-            success = db.claim_signup_bonus(user_id)
+            success = db.claim_signup_test(user_id)
             
             if success:
                 success_text = """🎉 מזל טוב!👌
@@ -1668,6 +1275,76 @@ https://telegra.ph/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9E%D7%95%D7%A9---yad
             logger.error(f"Error handling share referral: {e}")
             await update.callback_query.answer("❌ שגיאה בשיתוף")
 
+
+    async def _handle_show_whatsapp_links(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle show WhatsApp links action"""
+        user_id = update.effective_user.id
+        logger.info(f"[DEBUG] _handle_show_whatsapp_links called for user {user_id}")
+        
+        results = db.get_user_results(user_id, limit=1)
+        
+        if results:
+            latest_result = results[0]
+            csv_file = latest_result['csv_file_path']
+            logger.info(f"[DEBUG] CSV file path: '{csv_file}'")
+            
+            # Check if csv_file path is valid
+            if not csv_file or not csv_file.strip():
+                logger.warning(f"Empty CSV file path for user {user_id}")
+                await update.callback_query.edit_message_text("❌ לא נמצא קובץ תוצאות")
+                return
+            
+            if os.path.exists(csv_file):
+                try:
+                    # Read CSV file and extract phone numbers
+                    import csv
+                    phone_links = []
+                    
+                    with open(csv_file, 'r', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            phone = row.get('phone_number', '').strip()
+                            if phone and phone != '0' and len(phone) >= 9:
+                                # Clean phone number (remove spaces, dashes, etc.)
+                                clean_phone = ''.join(filter(str.isdigit, phone))
+                                if clean_phone.startswith('0'):
+                                    clean_phone = '972' + clean_phone[1:]  # Convert to international format
+                                elif not clean_phone.startswith('972'):
+                                    clean_phone = '972' + clean_phone
+                                
+                                whatsapp_link = f"https://wa.me/{clean_phone}"
+                                phone_links.append(f"📱 {phone}: {whatsapp_link}")
+                    
+                    logger.info(f"[DEBUG] Generated {len(phone_links)} WhatsApp links")
+                    
+                    if phone_links:
+                        # Split into chunks of 13 phones per message
+                        chunk_size = 13
+                        for i in range(0, len(phone_links), chunk_size):
+                            chunk = phone_links[i:i+chunk_size]
+                            phones_text = f"📱 קישורי וואטסאפ ({len(chunk)} מספרים):\n\n"
+                            phones_text += '\n'.join(chunk)
+                            
+                            await context.bot.send_message(
+                                chat_id=update.callback_query.message.chat_id,
+                                text=phones_text,
+                                disable_web_page_preview=True
+                            )
+                        
+                        # Done - no extra messages
+                        logger.info(f"[DEBUG] WhatsApp links sent successfully")
+                    else:
+                        logger.warning(f"[DEBUG] No valid phone numbers found in CSV")
+                        await update.callback_query.edit_message_text("❌ לא נמצאו מספרי טלפון תקינים")
+                except Exception as e:
+                    logger.error(f"Error processing CSV file for WhatsApp links: {e}")
+                    await update.callback_query.edit_message_text("❌ שגיאה בעיבוד קובץ התוצאות")
+            else:
+                logger.warning(f"[DEBUG] CSV file does not exist: {csv_file}")
+                await update.callback_query.edit_message_text("❌ קובץ התוצאות לא נמצא")
+        else:
+            logger.warning(f"[DEBUG] No results found for user {user_id}")
+            await update.callback_query.edit_message_text("❌ לא נמצאו תוצאות")
 
     async def _handle_calculator_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle calculator menu"""
@@ -1810,127 +1487,6 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
         except Exception as e:
             logger.error(f"Error handling invite friends: {e}")
     
-    async def _handle_image_gen_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle image generation menu"""
-        from image_generator import image_generator
-        await image_generator.show_image_gen_menu(update, context)
-    
-    async def _handle_image_gen_text(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle text-to-image generation"""
-        from image_generator import image_generator
-        await image_generator.start_text_to_image(update, context)
-    
-    async def _handle_image_gen_from_image(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle image-to-image generation"""
-        from image_generator import image_generator
-        await image_generator.start_image_to_image(update, context)
-    
-    async def _handle_whatsapp_message_input_from_callback(self, query, context: ContextTypes.DEFAULT_TYPE, message_text: str, waiting_for: str):
-        """Handle WhatsApp message content input from callback query (template button)"""
-        try:
-            user_id = query.from_user.id
-            result_id = waiting_for.replace('whatsapp_message_', '')
-            
-            # Clear waiting state
-            db.set_user_waiting_for(user_id, None)
-            
-            # Get the selected result and phone numbers
-            results = db.get_user_results(user_id, limit=10)
-            selected_result = None
-            for result in results:
-                if str(result['id']) == result_id:
-                    selected_result = result
-                    break
-            
-            if not selected_result:
-                await query.message.reply_text("❌ תוצאה לא נמצאה")
-                return
-            
-            # Get phone numbers from CSV file
-            csv_file = selected_result['csv_file_path']
-            if not csv_file or not os.path.exists(csv_file):
-                await query.message.reply_text("❌ קובץ התוצאות לא נמצא")
-                return
-            
-            # Read phone numbers from CSV
-            phone_numbers = []
-            try:
-                import csv
-                with open(csv_file, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        if 'phone_number' in row and row['phone_number']:
-                            phone_numbers.append(row['phone_number'])
-            except Exception as e:
-                logger.error(f"Error reading CSV file: {e}")
-                await query.message.reply_text("❌ שגיאה בקריאת קובץ התוצאות")
-                return
-            
-            if not phone_numbers:
-                await query.message.reply_text("❌ לא נמצאו מספרי טלפון בקובץ")
-                return
-            
-            # Store message for AI choice
-            context.user_data['pending_message'] = {
-                'result_id': result_id,
-                'phone_numbers': phone_numbers,
-                'message_text': message_text
-            }
-            
-            # Show AI choice screen
-            ai_choice_text = "🤖 **בחר אם להוסיף המשך שיחה של AI**\n\n"
-            ai_choice_text += "האם ברצונך להפעיל תשובות אוטומטיות חכמות (AI) שיגיבו למפרסמים בוואטסאפ?\n\n"
-            ai_choice_text += "✅ **כן** - הבוט יגיב אוטומטית בצורה חכמה\n"
-            ai_choice_text += "❌ **לא** - שליחה רגילה בלבד"
-            
-            keyboard = [
-                [InlineKeyboardButton("✅ כן, הפעל AI", callback_data=f"ai_yes_{result_id}")],
-                [InlineKeyboardButton("❌ לא, המשך רגיל", callback_data=f"ai_no_{result_id}")],
-                [InlineKeyboardButton("🔙 חזור", callback_data="back_to_main")]
-            ]
-            await query.edit_message_text(ai_choice_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp message input from callback: {e}")
-            await query.message.reply_text("❌ שגיאה בשליחת ההודעות")
-    
-    async def _handle_whatsapp_message_input_csv_from_callback(self, query, context: ContextTypes.DEFAULT_TYPE, message_text: str):
-        """Handle WhatsApp message content input for CSV uploaded files from callback query"""
-        try:
-            user_id = query.from_user.id
-            
-            # Clear waiting state
-            db.set_user_waiting_for(user_id, None)
-            
-            # Get phone numbers from context
-            phone_numbers = context.user_data.get('csv_phone_numbers', [])
-            
-            if not phone_numbers:
-                await query.message.reply_text("❌ לא נמצאו מספרי טלפון")
-                return
-            
-            # Store message for confirmation
-            context.user_data['pending_message'] = {
-                'result_id': 'csv',
-                'phone_numbers': phone_numbers,
-                'message_text': message_text
-            }
-            
-            # Show confirmation screen
-            confirm_text = f"📊 **סיכום שליחה**\n\n"
-            confirm_text += f"📞 **מספר לידים:** {len(phone_numbers)}\n"
-            confirm_text += f"💬 **תוכן ההודעה:**\n{message_text}\n\n"
-            confirm_text += "✅ לחץ על 'שגר הודעות' כדי להתחיל את השליחה"
-            
-            keyboard = [
-                [InlineKeyboardButton("🚀 שגר הודעות", callback_data="confirm_send_csv")],
-                [InlineKeyboardButton("❌ ביטול", callback_data="back_to_main")]
-            ]
-            await query.edit_message_text(confirm_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-            
-        except Exception as e:
-            logger.error(f"Error handling WhatsApp message input from CSV callback: {e}")
-            await query.message.reply_text("❌ שגיאה בשליחת ההודעות")
-    
     async def _handle_ai_yes(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
         """Handle AI yes button - ask for AI prompt"""
         try:
@@ -2034,76 +1590,6 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
             logger.error(f"Error handling AI prompt input: {e}")
             await update.message.reply_text("❌ שגיאה בשמירת הפרומפט")
     
-    async def _handle_send_to_scraped_leads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle sending WhatsApp messages to leads from last scraping - uses original WhatsApp flow"""
-        try:
-            query = update.callback_query
-            user_id = query.from_user.id
-            language = db.get_user_language(user_id)
-            
-            # Get last scraping result file
-            results_file = db.get_last_scraping_result(user_id)
-            
-            if not results_file or not os.path.exists(results_file):
-                await query.message.reply_text("❌ לא נמצאו תוצאות סריקה אחרונות. אנא הרץ סריקה חדשה.")
-                return
-            
-            # Read phone numbers from CSV
-            import csv
-            phone_numbers = []
-            try:
-                with open(results_file, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        phone = row.get('phone_number', '').strip()
-                        if phone and phone != '0501234567' and len(phone) >= 9:
-                            phone_numbers.append(phone)
-            except Exception as e:
-                logger.error(f"Error reading CSV file: {e}")
-                await query.message.reply_text("❌ שגיאה בקריאת קובץ התוצאות")
-                return
-            
-            if not phone_numbers:
-                await query.message.reply_text("❌ לא נמצאו מספרי טלפון בתוצאות הסריקה")
-                return
-            
-            # Store phone numbers in context for later use
-            context.user_data['selected_phones'] = phone_numbers
-            context.user_data['from_scraping'] = True
-            
-            # Use original WhatsApp flow - Step 1: Instance code
-            db.set_user_waiting_for(user_id, 'whatsapp_instance')
-            
-            message = "הכנס כאן את קוד החיבור שלך 🔗 כדי להתחיל\nאם עדיין אין לך קוד – לחץ על הכפתור \"קוד חיבור\" כדי ליצור קוד חדש." if language == 'hebrew' else "Enter your connection code here 🔗 to get started\nIf you don't have a code yet – click the \"Connection Code\" button to create a new one."
-            
-            from telegram import WebAppInfo
-            keyboard = []
-            
-            # Check if user has saved instance code
-            saved_instance = db.get_user_whatsapp_instance(user_id)
-            if saved_instance:
-                # Add button with saved code (show only first 20 chars)
-                display_code = saved_instance[:20] + '...' if len(saved_instance) > 20 else saved_instance
-                keyboard.append([InlineKeyboardButton(f"✅ {display_code}", callback_data="use_saved_instance")])
-            
-            # Add regular buttons
-            keyboard.extend([
-                [InlineKeyboardButton("🔗 קוד חיבור", web_app=WebAppInfo(url='https://yad2bot.co.il/user'))],
-                [InlineKeyboardButton("❌ ביטול", callback_data="back_to_main")]
-            ])
-            
-            await query.message.reply_text(
-                message,
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            
-        except Exception as e:
-            logger.error(f"Error handling send to scraped leads: {e}")
-            await query.message.reply_text("❌ שגיאה בטיפול בבקשה")
-    
-
-
-
     async def _handle_view_sent_numbers(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle viewing sent numbers list"""
         try:
@@ -2111,7 +1597,7 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
             user_id = query.from_user.id
             
             # Get sent count
-            sent_count = self.whatsapp_manager.sent_tracker.get_sent_count(user_id)
+            # Removed: sent_count = self.whatsapp_manager.sent_tracker.get_sent_count(user_id)
             
             if sent_count == 0:
                 await query.answer()
@@ -2126,7 +1612,7 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
                 return
             
             # Get sent phones (last 50)
-            sent_phones = self.whatsapp_manager.sent_tracker.get_sent_phones(user_id, limit=50)
+            # Removed: sent_phones = self.whatsapp_manager.sent_tracker.get_sent_phones(user_id, limit=50)
             
             message = f"📋 **רשימת מספרים ששלחתי**\n\n"
             message += f"📊 **סה\"כ מספרים:** {sent_count}\n"
@@ -2163,14 +1649,14 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
             user_id = query.from_user.id
             
             # Get current count before reset
-            sent_count = self.whatsapp_manager.sent_tracker.get_sent_count(user_id)
+            # Removed: sent_count = self.whatsapp_manager.sent_tracker.get_sent_count(user_id)
             
             if sent_count == 0:
                 await query.answer("אין מספרים לאיפוס", show_alert=True)
                 return
             
             # Clear sent history
-            success = self.whatsapp_manager.sent_tracker.clear_sent_history(user_id)
+            # Removed: success = self.whatsapp_manager.sent_tracker.clear_sent_history(user_id)
             
             if success:
                 await query.answer()

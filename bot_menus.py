@@ -111,7 +111,11 @@ class MenuManager:
             [InlineKeyboardButton("🆕 מהיום", callback_data='city_selection_rent_today'),
              InlineKeyboardButton("🔑 כללי", callback_data='city_selection_rent_all')],
             [InlineKeyboardButton("⏰ תזמון", callback_data='schedule_scraping_rent'),
-             InlineKeyboardButton("🔧 טסט", callback_data='city_selection_rent_bonus')],
+             InlineKeyboardButton("🔧 בדיקה", callback_data='city_selection_rent_test')],
+            [InlineKeyboardButton("📊 25 דפים", callback_data='city_selection_rent_pages_25'),
+             InlineKeyboardButton("📊 50 דפים", callback_data='city_selection_rent_pages_50')],
+            [InlineKeyboardButton("📊 100 דפים", callback_data='city_selection_rent_pages_100'),
+             InlineKeyboardButton("📊 200 דפים", callback_data='city_selection_rent_pages_200')],
             [InlineKeyboardButton("🔙 חזרה", callback_data='scraper_menu')]
         ]
         return InlineKeyboardMarkup(keyboard)
@@ -122,7 +126,11 @@ class MenuManager:
             [InlineKeyboardButton("🆕 מהיום", callback_data='city_selection_sale_today'),
              InlineKeyboardButton("🏠 כללי", callback_data='city_selection_sale_all')],
             [InlineKeyboardButton("⏰ תזמון", callback_data='schedule_scraping_sale'),
-             InlineKeyboardButton("🔧 טסט", callback_data='city_selection_sale_bonus')],
+             InlineKeyboardButton("🔧 בדיקה", callback_data='city_selection_sale_test')],
+            [InlineKeyboardButton("📊 25 דפים", callback_data='city_selection_sale_pages_25'),
+             InlineKeyboardButton("📊 50 דפים", callback_data='city_selection_sale_pages_50')],
+            [InlineKeyboardButton("📊 100 דפים", callback_data='city_selection_sale_pages_100'),
+             InlineKeyboardButton("📊 200 דפים", callback_data='city_selection_sale_pages_200')],
             [InlineKeyboardButton("🔙 חזרה", callback_data='scraper_menu')]
         ]
         return InlineKeyboardMarkup(keyboard)
@@ -328,7 +336,7 @@ Yad2bot.co.il@gmail.com
         """Send scraper rent submenu"""
         try:
             keyboard = self.create_scraper_rent_keyboard()
-            text = "בחר את סוג הסריקה שתרצה לבצוע להשכרה –\n\nתוכל לבחור בין מודעות חדשות שפורסמו היום, סריקה כוללת של כל המודעות, או מצב טסט לבדיקה זריזה."            
+            text = "בחר את סוג הסריקה שתרצה לבצע להשכרה –\n\nתוכל לבחור בין מודעות חדשות שפורסמו היום, סריקה כוללת של כל המודעות, או מצב בדיקה לבדיקה זריזה."            
             await update.callback_query.edit_message_text(
                 text=text,
                 reply_markup=keyboard
@@ -340,7 +348,7 @@ Yad2bot.co.il@gmail.com
         """Send scraper sale submenu"""
         try:
             keyboard = self.create_scraper_sale_keyboard()
-            text = "בחר את סוג הסריקה שתרצה לבצוע למכירה –\n\nתוכל לבחור בין מודעות חדשות שפורסמו היום, סריקה כוללת של כל המודעות, או מצב טסט לבדיקה זריזה."
+            text = "בחר את סוג הסריקה שתרצה לבצע למכירה –\n\nתוכל לבחור בין מודעות חדשות שפורסמו היום, סריקה כוללת של כל המודעות, או מצב בדיקה לבדיקה זריזה."
             
             await update.callback_query.edit_message_text(
                 text=text,
@@ -675,7 +683,7 @@ async def send_my_account_menu(self, update: Update, context: ContextTypes.DEFAU
         
         user_id = update.effective_user.id
         user_credits = db.get_user_credits_balance(user_id)
-        has_claimed_bonus = db.has_claimed_signup_bonus(user_id)
+        has_claimed_test = db.has_claimed_signup_test(user_id)
         
         # Get statistics from database
         total_listings = db.get_total_listings_scraped(user_id)
@@ -692,14 +700,14 @@ async def send_my_account_menu(self, update: Update, context: ContextTypes.DEFAU
         keyboard = []
         
         # Add claim bonus button ONLY if not claimed
-        if not has_claimed_bonus:
-            keyboard.append([InlineKeyboardButton("🎁 קבל בונוס הרשמה (100 קרדיטים)", callback_data='claim_signup_bonus')])
+        if not has_claimed_test:
+            keyboard.append([InlineKeyboardButton("🎁 קבל בונוס הרשמה (100 קרדיטים)", callback_data='claim_signup_test')])
         
         # Add other account options - 2 buttons per row
         keyboard.extend([
             [InlineKeyboardButton("🔢 המספרים שלי", web_app=WebAppInfo(url='https://yad2bot.co.il/user')),
              InlineKeyboardButton("🎨 צור תמונה של סוכן", callback_data='image_gen_menu')],
-            [InlineKeyboardButton("💎 בונוס יומי", callback_data='daily_bonus_offer'),
+            [InlineKeyboardButton("💎 בונוס יומי", callback_data='daily_test_offer'),
              InlineKeyboardButton("🚀 שתף וקבל קרדיטים", callback_data='invite_friends')],
             [InlineKeyboardButton("🔙 תפריט ראשי", callback_data='back_to_main')]
         ])

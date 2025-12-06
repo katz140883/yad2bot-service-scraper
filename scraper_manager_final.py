@@ -26,7 +26,7 @@ class FinalScraperManager:
     """Final scraper manager with all critical issues fixed."""
     
     def __init__(self):
-        self.scraper_script = "/root/yad2bot/yad2bot_package/war_yad2bot/scraper/main.py"
+        self.scraper_script = "/home/ubuntu/yad2bot_scraper/scraper/main.py"
         self.bot_instance = None
         self.active_sessions = {}  # user_id -> session_data
         self.progress_monitor = FixedProgressMonitor()
@@ -51,7 +51,7 @@ class FinalScraperManager:
         # Create cancel flag files for all possible scraping sessions
         try:
             import glob
-            data_dir = "/root/yad2bot/yad2bot_package/war_yad2bot/data"
+            data_dir = "/home/ubuntu/yad2bot_scraper/data"
             today_str = datetime.now().strftime('%Y-%m-%d')
             
             # Create cancel flags for all possible combinations
@@ -146,7 +146,7 @@ class FinalScraperManager:
             logger.info("[ScraperManager] Cleaning up old files...")
             
             # Clean up old progress files
-            progress_pattern = "/root/yad2bot/yad2bot_package/war_yad2bot/data/*_progress.json"
+            progress_pattern = "/home/ubuntu/yad2bot_scraper/data/*_progress.json"
             progress_files = glob.glob(progress_pattern)
             for file in progress_files:
                 try:
@@ -157,7 +157,7 @@ class FinalScraperManager:
             
             # Clean up today's CSV files to force new scan
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern = f"/root/yad2bot/yad2bot_package/war_yad2bot/data/*{today}*.csv"
+            csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
             csv_files = glob.glob(csv_pattern)
             for file in csv_files:
                 try:
@@ -178,7 +178,7 @@ class FinalScraperManager:
             
             # Kill main scraper processes using specific path to avoid killing the bot
             try:
-                result = subprocess.run(['pkill', '-f', '/root/yad2bot/yad2bot_package/war_yad2bot/scraper/main.py'], capture_output=True, text=True, timeout=5)
+                result = subprocess.run(['pkill', '-f', '/home/ubuntu/yad2bot_scraper/scraper/main.py'], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     logger.info("[ScraperManager] Killed existing scraper main.py processes")
             except Exception as e:
@@ -213,8 +213,8 @@ class FinalScraperManager:
             
             if language == 'hebrew':
                 mode_text = "השכרה" if mode == 'rent' else "מכירה"
-                if filter_type == 'bonus':
-                    filter_text = "מודעות טסט"
+                if filter_type == 'test':
+                    filter_text = "מודעות בדיקה"
                 elif filter_type == 'today':
                     filter_text = "מודעות מהיום"
                 else:
@@ -237,7 +237,7 @@ class FinalScraperManager:
                     return f"🏠 {mode_text} - כל הארץ\n📅 {filter_text}"
             else:
                 mode_text = "Rent" if mode == 'rent' else "Sale"
-                if filter_type == 'bonus':
+                if filter_type == 'test':
                     filter_text = "Test Listings"
                 elif filter_type == 'today':
                     filter_text = "Today's Listings"
@@ -264,7 +264,7 @@ class FinalScraperManager:
             logger.error(f"[ScraperManager] Error getting selection info: {e}")
             return "🏠 סריקה" if language == 'hebrew' else "🏠 Scanning"
     
-    async def run_scraper_with_message(self, status_message, context: ContextTypes.DEFAULT_TYPE, mode: str, filter_type: str, city_code: str = None):
+    async def run_scraper_with_message(self, status_message, context: ContextTypes.DEFAULT_TYPE, mode: str, filter_type: str, city_code: str = None, page_limit: int = None):
         """Run scraper with proper cleanup and monitoring - FINAL VERSION."""
         user_id = status_message.chat.id
         language = db.get_user_language(user_id)
@@ -314,6 +314,9 @@ class FinalScraperManager:
             
             if city_code:
                 command.extend(["--city", city_code])
+            
+            if page_limit:
+                command.extend(["--max-pages", str(page_limit)])
             
             logger.info(f"[ScraperManager] Command: {' '.join(command)}")
             
@@ -477,7 +480,7 @@ class FinalScraperManager:
                 # Extract mode, filter_type and city_code from results_file name
                 import re
                 filename = os.path.basename(results_file)
-                # Parse filename: City1300_rent_bonus... or Jerusalem_rent_bonus... or Ashdod_rent_bonus...
+                # Parse filename: City1300_rent_test... or Jerusalem_rent_test... or Ashdod_rent_test...
                 # Try to extract city code from City#### format
                 city_match = re.search(r'City(\d+)_', filename)
                 if city_match:
@@ -506,13 +509,15 @@ class FinalScraperManager:
                     else:
                         city_code = None
                 
-                match = re.search(r'_(rent|sale)_(today|all|bonus)_', filename)
+                # Updated regex to include 'test' filter
+                match = re.search(r'_(rent|sale)_(today|all|test)_', filename)
                 if match:
                     mode = match.group(1)
                     filter_type = match.group(2)
                 else:
-                    mode = 'unknown'
-                    filter_type = 'unknown'
+                    # Fallback: use safe defaults instead of 'unknown'
+                    mode = 'rent'  # Default to rent
+                    filter_type = 'all'  # Default to all
                 
                 # Save to database
                 db.save_scraping_result(
