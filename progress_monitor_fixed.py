@@ -53,6 +53,7 @@ class FixedProgressMonitor:
             
             # Get expected progress file path
             from datetime import date
+            import glob
             today_str = date.today().strftime('%Y-%m-%d')
             # Search for progress files with both old and new naming patterns
             progress_patterns = [
@@ -60,8 +61,8 @@ class FixedProgressMonitor:
                 f"/home/ubuntu/yad2bot_scraper/data/*{today_str}*progress*.json"
             ]
             
-            # Initial message
-            initial_msg = "🔄 מתחבר לאתר yad2..." if language == 'hebrew' else "🔄 Connecting to yad2..."
+            # Initial message with correct format
+            initial_msg = "שלב 1/2\nסריקת מודעות\n\n🔄 מתחיל..." if language == 'hebrew' else "Step 1/2\nScanning Listings\n\n🔄 Starting..."
             full_message = f"{selection_info}\n\n{initial_msg}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור את הסריקה" if language == 'hebrew' else f"{selection_info}\n\n{initial_msg}\n\n⏹️ Click cancel button to stop scraping"
             
             await status_message.edit_text(full_message, reply_markup=keyboard)
@@ -69,14 +70,19 @@ class FixedProgressMonitor:
             
             # Monitor for progress file and real-time updates
             last_message = ""
+            scraper_finished = False
+            
             for attempt in range(600):  # Monitor for up to 30 minutes (600 * 3 seconds)
                 if self.cancel_flag:
                     logger.info(f"[ProgressMonitor] Cancel detected during scraper monitoring")
                     break
                 
+                # Check if CSV file was created (indicates scraping finished)
+                csv_files = glob.glob(f"/home/ubuntu/yad2bot_scraper/data/*{today_str}*.csv")
+                csv_file_exists = len(csv_files) > 0
+                
                 # Try to find and read progress file
                 try:
-                    import glob
                     progress_files = []
                     
                     # Search all patterns
@@ -91,6 +97,7 @@ class FixedProgressMonitor:
                         
                         # Create progress message
                         current = progress_data.get('current_listing', 0)
+                        total = progress_data.get('total_listings_to_check', 20)
                         found = progress_data.get('found_recent', 0)
                         duplicates = progress_data.get('duplicates_skipped', 0)
                         title = progress_data.get('current_title', '')
@@ -102,19 +109,15 @@ class FixedProgressMonitor:
                         if language == 'hebrew':
                             # Show 'מהיום' only if filter_type is 'today'
                             if filter_type == 'today':
-                                progress_msg = f"🔍 בודק מודעה {current}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n✅ נמצאו: {found} מודעות מהיום"
+                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
                             else:
-                                progress_msg = f"🔍 בודק מודעה {current}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n✅ נמצאו: {found} מודעות"
-                            if duplicates > 0:
-                                progress_msg += f"\n⏭️ דולגו: {duplicates} כפילויות"
+                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📋 {title}\n📄 דף {current_page}/{total_pages}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
                         else:
                             # Show 'recent' only if filter_type is 'today'
                             if filter_type == 'today':
-                                progress_msg = f"🔍 Checking listing {current}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n✅ Found: {found} recent listings"
+                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
                             else:
-                                progress_msg = f"🔍 Checking listing {current}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n✅ Found: {found} listings"
-                            if duplicates > 0:
-                                progress_msg += f"\n⏭️ Skipped: {duplicates} duplicates"
+                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📋 {title}\n📄 Page {current_page}/{total_pages}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
                         
                         full_message = f"{selection_info}\n\n{progress_msg}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור את הסריקה" if language == 'hebrew' else f"{selection_info}\n\n{progress_msg}\n\n⏹️ Click cancel button to stop scraping"
                         
@@ -123,36 +126,26 @@ class FixedProgressMonitor:
                             await status_message.edit_text(full_message, reply_markup=keyboard)
                             logger.info(f"[ProgressMonitor] Updated scraper progress: {progress_msg}")
                             last_message = progress_msg
+                        
+                        # Check if scraping is complete (reached total listings)
+                        if current >= total and total > 0:
+                            logger.info(f"[ProgressMonitor] Scraping reached {current}/{total}, checking if process finished...")
+                            scraper_finished = True
                     
                     else:
-                        # Show generic progress if no file yet
-                        if attempt < 10:
-                            generic_msg = "🔍 סורק מודעות..." if language == 'hebrew' else "🔍 Scanning listings..."
-                            if generic_msg != last_message:
-                                full_message = f"{selection_info}\n\n{generic_msg}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור את הסריקה" if language == 'hebrew' else f"{selection_info}\n\n{generic_msg}\n\n⏹️ Click cancel button to stop scraping"
-                                await status_message.edit_text(full_message, reply_markup=keyboard)
-                                logger.info(f"[ProgressMonitor] Updated scraper progress: {generic_msg}")
-                                last_message = generic_msg
+                        # Wait for progress file instead of showing generic message
+                        pass
                 
                 except Exception as e:
                     logger.debug(f"[ProgressMonitor] Error reading progress file: {e}")
                 
-                # Check if CSV file was created (indicates scraper completed data collection)
-                try:
-                    from datetime import datetime
-                    today = datetime.now().strftime('%Y-%m-%d')
-                    csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
-                    all_csv_files = glob.glob(csv_pattern)
-                    csv_files = [f for f in all_csv_files if '_progress' not in f and '_checking_progress' not in f and '_with_phones' not in f]
-                    
-                    # If CSV exists and we have progress files, scraper completed
-                    if csv_files and progress_files:
-                        logger.info(f"[ProgressMonitor] CSV file detected, scraper completed data collection, exiting monitoring")
-                        break
-                except:
-                    pass
+                # If scraper finished processing all listings and CSV file created, exit loop
+                if scraper_finished and csv_file_exists:
+                    logger.info(f"[ProgressMonitor] Scraper finished and CSV file created, moving to phase 2...")
+                    await asyncio.sleep(1)  # Give time for file system sync
+                    break
                 
-                await asyncio.sleep(3)  # Check every 3 seconds
+                await asyncio.sleep(1)  # Check every 1 second for faster updates
                 
                 # Reset attempt counter if we got new progress (to avoid timeout during active scraping)
                 if progress_files and attempt > 60:  # After 3 minutes, reset if still getting updates
@@ -170,6 +163,18 @@ class FixedProgressMonitor:
             
             # Create cancel keyboard
             keyboard = self.create_cancel_keyboard(language)
+            
+            # Send a NEW message for phone extraction progress (separate from scraping progress)
+            initial_text = "📱 מחלץ מספרי טלפון..." if language == 'hebrew' else "📱 Extracting phone numbers..."
+            phone_progress_message = await status_message.get_bot().send_message(
+                chat_id=status_message.chat_id,
+                text=initial_text,
+                reply_markup=keyboard
+            )
+            logger.info(f"[ProgressMonitor] Sent new message for phone extraction progress")
+            
+            # Use the new message for updates instead of status_message
+            status_message = phone_progress_message
             
             # Find progress file pattern
             today = datetime.now().strftime('%Y-%m-%d')
@@ -225,9 +230,9 @@ class FixedProgressMonitor:
                         
                         # Create progress message
                         if language == 'hebrew':
-                            progress_text = f"{selection_info}\n\n📱 מחלץ מספרי טלפון...\n\n📊 התקדמות: {percent:.1f}% ({current}/{total})\n📞 נמצאו: {phones_found} מספרים\n⏱️ זמן נותר: {time_str}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור"
+                            progress_text = f"{selection_info}\n\nשלב 2/2\nחילוץ מספרים\n\n📊 התקדמות: {percent:.1f}% ({current}/{total})\n📞 נמצאו: {phones_found} מספרים\n⏱️ זמן נותר: {time_str}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור"
                         else:
-                            progress_text = f"{selection_info}\n\n📱 Extracting phone numbers...\n\n📊 Progress: {percent:.1f}% ({current}/{total})\n📞 Found: {phones_found} numbers\n⏱️ Time remaining: {time_str}\n\n⏹️ Click cancel button to stop"
+                            progress_text = f"{selection_info}\n\nStep 2/2\nExtracting Numbers\n\n📊 Progress: {percent:.1f}% ({current}/{total})\n📞 Found: {phones_found} numbers\n⏱️ Time remaining: {time_str}\n\n⏹️ Click cancel button to stop"
                         
                         # Update message only if progress changed significantly
                         if progress_text != last_progress_text:
@@ -242,6 +247,11 @@ class FixedProgressMonitor:
                         if status == 'completed' or (current >= total and total > 0):
                             logger.info(f"[ProgressMonitor] Phone extraction completed: {phones_found} phones found")
                             break
+                        
+                        # Check if no listings to process (all duplicates)
+                        if total == 0 and current == 0:
+                            logger.info(f"[ProgressMonitor] No new listings to process (all duplicates)")
+                            break
                             
                     except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
                         logger.warning(f"[ProgressMonitor] Error reading progress file: {e}")
@@ -253,9 +263,9 @@ class FixedProgressMonitor:
                     char_index = (wait_time // 2) % len(progress_chars)
                     
                     if language == 'hebrew':
-                        progress_text = f"{selection_info}\n\n📱 {progress_chars[char_index]} מחלץ מספרי טלפון...\n\n⏱️ מתחיל עיבוד...\n\n⏹️ לחץ על כפתור הביטול כדי לעצור"
+                        progress_text = f"{selection_info}\n\nשלב 2/2\nחילוץ מספרים\n\n📱 {progress_chars[char_index]} מתחיל עיבוד...\n\n⏹️ לחץ על כפתור הביטול כדי לעצור"
                     else:
-                        progress_text = f"{selection_info}\n\n📱 {progress_chars[char_index]} Extracting phone numbers...\n\n⏱️ Starting processing...\n\n⏹️ Click cancel button to stop"
+                        progress_text = f"{selection_info}\n\nStep 2/2\nExtracting Numbers\n\n📱 {progress_chars[char_index]} Starting processing...\n\n⏹️ Click cancel button to stop"
                     
                     # Update animation only every 6 seconds to avoid too many updates
                     if wait_time % 6 == 0 and progress_text != last_progress_text:
@@ -272,8 +282,8 @@ class FixedProgressMonitor:
                     await asyncio.sleep(3)  # Give time for final file writes
                     break
                 
-                await asyncio.sleep(3)  # Check every 3 seconds
-                wait_time += 3
+                await asyncio.sleep(1)  # Check every 1 second for faster updates
+                wait_time += 1
             
             if self.cancel_flag:
                 logger.info(f"[ProgressMonitor] Phone extraction monitoring cancelled by user {user_id}")
@@ -292,15 +302,27 @@ class FixedProgressMonitor:
             logger.info(f"[ProgressMonitor] Waiting for results file for user {user_id}")
             
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_with_phones.csv"
+            csv_pattern_with_phones = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_with_phones.csv"
+            csv_pattern_regular = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
             
             wait_time = 0
             while wait_time < timeout and not self.cancel_flag:
-                csv_files = glob.glob(csv_pattern)
+                # First try to find _with_phones file
+                csv_files = glob.glob(csv_pattern_with_phones)
                 if csv_files:
                     latest_csv = max(csv_files, key=os.path.getctime)
-                    logger.info(f"[ProgressMonitor] Results file found: {latest_csv}")
+                    logger.info(f"[ProgressMonitor] Results file found (with phones): {latest_csv}")
                     return latest_csv
+                
+                # If no _with_phones file after 10 seconds, check for regular CSV (no new listings case)
+                if wait_time >= 10:
+                    csv_files = glob.glob(csv_pattern_regular)
+                    # Filter out old files with _with_phones suffix
+                    csv_files = [f for f in csv_files if '_with_phones' not in f]
+                    if csv_files:
+                        latest_csv = max(csv_files, key=os.path.getctime)
+                        logger.info(f"[ProgressMonitor] Results file found (regular): {latest_csv}")
+                        return latest_csv
                 
                 await asyncio.sleep(2)
                 wait_time += 2

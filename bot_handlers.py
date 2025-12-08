@@ -785,15 +785,6 @@ class BotHandlers:
             filter_type = context.user_data.get('scraper_filter', 'today')
             page_limit = context.user_data.get('page_limit', None)
             
-            # Create disappearing menu effect - edit the message to show selection
-            mode_text = 'השכרה' if mode == 'rent' else 'מכירה'
-            time_text = 'מהיום' if filter_type == 'today' else 'כל המודעות'
-            if page_limit:
-                time_text = f'כל המודעות ({page_limit} דפים)'
-            
-            selection_text = f"🏠 {mode_text} - עיר {city_name}\n📅 מודעות {time_text}\n\n🔍 מתחיל סריקת לידים חמים באזור {city_name}..."
-            await update.callback_query.edit_message_text(selection_text)
-            
             # Start scraping with real-time updates and cancel button
             # Use the existing callback message instead of creating a new one
             status_message = update.callback_query.message

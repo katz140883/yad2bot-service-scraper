@@ -143,11 +143,13 @@ class FinalScraperManager:
     async def cleanup_old_files(self):
         """Clean up old progress and CSV files to ensure fresh start."""
         try:
-            logger.info("[ScraperManager] Cleaning up old files...")
+            logger.info("[ScraperManager] Cleaning up old files - START")
             
             # Clean up old progress files
             progress_pattern = "/home/ubuntu/yad2bot_scraper/data/*_progress.json"
+            logger.info(f"[ScraperManager] Looking for progress files: {progress_pattern}")
             progress_files = glob.glob(progress_pattern)
+            logger.info(f"[ScraperManager] Found {len(progress_files)} progress files")
             for file in progress_files:
                 try:
                     os.remove(file)
@@ -280,7 +282,7 @@ class FinalScraperManager:
             
             # STEP 1: Complete cleanup to ensure fresh start
             await self.cleanup_old_files()
-            await self.kill_existing_processes()
+            # Removed kill_existing_processes - it was causing hangs
             
             # STEP 2: Store context data
             context.mode = mode
@@ -378,6 +380,17 @@ class FinalScraperManager:
             )
             logger.info(f"[Monitor] Scraper progress monitoring completed")
             
+            # Send sticker after scraping completed
+            try:
+                sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
+                await status_message.get_bot().send_sticker(
+                    chat_id=status_message.chat_id,
+                    sticker=sticker_id
+                )
+                logger.info(f"[Monitor] Sent sticker after scraping")
+            except Exception as e:
+                logger.error(f"[Monitor] Error sending sticker: {e}")
+            
             # PHASE 2: Monitor phone extraction progress
             logger.info(f"[Monitor] Starting phone extraction monitoring")
             
@@ -413,10 +426,11 @@ class FinalScraperManager:
         try:
             logger.info(f"[Results] Sending final results: {results_file}")
             
-            # Count phone numbers
+            # Count phone numbers and duplicates
             import csv
             phone_count = 0
             total_listings = 0
+            duplicates_count = 0
             
             try:
                 with open(results_file, 'r', encoding='utf-8') as f:
@@ -431,9 +445,34 @@ class FinalScraperManager:
                 phone_count = 0
                 total_listings = 0
             
+            # Count duplicates from checking_progress file
+            try:
+                import os
+                import glob
+                data_dir = '/home/ubuntu/yad2bot_scraper/data'
+                
+                # Find the most recent checking_progress file
+                progress_files = glob.glob(os.path.join(data_dir, '*_checking_progress.json'))
+                if progress_files:
+                    # Sort by modification time, get most recent
+                    latest_file = max(progress_files, key=os.path.getmtime)
+                    
+                    with open(latest_file, 'r', encoding='utf-8') as f:
+                        progress_data = json.load(f)
+                        duplicates_count = progress_data.get('duplicates_skipped', 0)
+                    
+                    logger.info(f"[Results] Found {duplicates_count} duplicates from checking_progress")
+                else:
+                    logger.warning("[Results] No checking_progress file found")
+                    duplicates_count = 0
+            except Exception as e:
+                logger.error(f"[Results] Error counting duplicates: {e}")
+                duplicates_count = 0
+            
             # Create success message
             if language == 'hebrew':
-                success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n📞 מספרי טלפון: {phone_count}\n\n📎 קובץ התוצאות מצורף"
+                duplicates_line = f"\n⏭️ דולגו: {duplicates_count} כפילויות" if duplicates_count > 0 else ""
+                success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n📞 מספרי טלפון: {phone_count}{duplicates_line}\n\n📎 קובץ התוצאות מצורף"
             else:
                 success_text = f"{selection_info}\n\n✅ Scraping completed successfully!\n\n📊 Found: {total_listings} listings\n📞 Phone numbers: {phone_count}\n\n📎 Results file attached"
             
@@ -529,9 +568,6 @@ class FinalScraperManager:
                     phone_numbers_count=phone_count,
                     city_code=city_code
                 )
-                
-                # Store file path for WhatsApp flow
-                db.set_last_scraping_result(user_id, results_file)
                 
                 logger.info(f"[Results] Saved results to database for user {user_id}")
             except Exception as e:
