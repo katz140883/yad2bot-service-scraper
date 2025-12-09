@@ -472,28 +472,12 @@ class BotHandlers:
         )
     
     async def _handle_show_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle show info button - send user guide and technical documentation"""
+        """Handle show info button - send technical documentation PDF only"""
         try:
             query = update.callback_query
             await query.answer()
             
-            # Send friendly user guide as plain text
-            guide_text = (
-                "⚡ התחל סריקה:\n"
-                "סוג מודעה → דפים → עיר\n"
-                "\n"
-                "⌚ תזמן סריקה:\n"
-                "שעה → סוג → דפים → עיר\n"
-                "\n"
-                "📊 תוצאות:\n"
-                "CSV + CRM אוטומטי\n"
-                "\n"
-                "⏹️ ביטול בזמן סריקה"
-            )
-            
-            await query.message.reply_text(guide_text)
-            
-            # Send the technical documentation file (PDF)
+            # Send the technical documentation file (PDF) only
             doc_path = '/home/ubuntu/yad2bot-service-scraper/service scraper v1.0.pdf'
             
             await context.bot.send_document(
@@ -503,7 +487,7 @@ class BotHandlers:
                 caption="Developer Documentation v1.0"
             )
             
-            logger.info(f"User guide and technical documentation sent to user {query.from_user.id}")
+            logger.info(f"Technical documentation sent to user {query.from_user.id}")
             
         except Exception as e:
             logger.error(f"Error sending documentation: {e}")
