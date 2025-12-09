@@ -64,13 +64,9 @@ class BotHandlers:
             # Initialize user in database
             db.add_user(user_id, user_name)
             
-            # Send sticker
-            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
-            await context.bot.send_sticker(chat_id=update.message.chat_id, sticker=sticker_id)
-            
-            # Send CRM welcome message
+            # Send welcome GIF with caption and keyboard
             welcome_text = (
-                "👋 היי Admin, ברוך הבא לסקריפר! 🚀\n\n"
+                "👋 היי טוב לראות אותך! 🚀\n\n"
                 "כאן תוכל לעשות סריקות ועדכונים ל-CRM של Yad2bot:\n\n"
                 "🔍 סרוק מודעות חדשות\n"
                 "📊 צפה בתוצאות הסריקה\n"
@@ -84,9 +80,11 @@ class BotHandlers:
                 ]
             ]
             
-            await context.bot.send_message(
+            # Use file_id for instant sending (no upload needed)
+            await context.bot.send_animation(
                 chat_id=update.message.chat_id,
-                text=welcome_text,
+                animation="CgACAgQAAxkDAAICYGk3beqnCTNllztcH0o5JArgO_RXAAIHHwACOya5UQ9R2fn6D5JRNgQ",
+                caption=welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             

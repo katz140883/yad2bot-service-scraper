@@ -148,25 +148,33 @@ class FinalScraperManager:
             # Clean up old progress files
             progress_pattern = "/home/ubuntu/yad2bot_scraper/data/*_progress.json"
             logger.info(f"[ScraperManager] Looking for progress files: {progress_pattern}")
-            progress_files = glob.glob(progress_pattern)
+            
+            # Use asyncio.to_thread for glob.glob (non-blocking)
+            progress_files = await asyncio.to_thread(glob.glob, progress_pattern)
             logger.info(f"[ScraperManager] Found {len(progress_files)} progress files")
-            for file in progress_files:
-                try:
-                    os.remove(file)
-                    logger.info(f"[ScraperManager] Removed old progress file: {file}")
-                except Exception as e:
-                    logger.warning(f"[ScraperManager] Could not remove progress file {file}: {e}")
+            
+            # Parallel deletion of progress files
+            if progress_files:
+                await asyncio.gather(
+                    *[asyncio.to_thread(os.remove, f) for f in progress_files],
+                    return_exceptions=True
+                )
+                logger.info(f"[ScraperManager] Removed {len(progress_files)} progress files")
             
             # Clean up today's CSV files to force new scan
             today = datetime.now().strftime('%Y-%m-%d')
             csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
-            csv_files = glob.glob(csv_pattern)
-            for file in csv_files:
-                try:
-                    os.remove(file)
-                    logger.info(f"[ScraperManager] Removed old CSV file: {file}")
-                except Exception as e:
-                    logger.warning(f"[ScraperManager] Could not remove CSV file {file}: {e}")
+            
+            # Use asyncio.to_thread for glob.glob (non-blocking)
+            csv_files = await asyncio.to_thread(glob.glob, csv_pattern)
+            
+            # Parallel deletion of CSV files
+            if csv_files:
+                await asyncio.gather(
+                    *[asyncio.to_thread(os.remove, f) for f in csv_files],
+                    return_exceptions=True
+                )
+                logger.info(f"[ScraperManager] Removed {len(csv_files)} CSV files")
             
             logger.info("[ScraperManager] File cleanup completed")
             
@@ -179,16 +187,26 @@ class FinalScraperManager:
             logger.info("[ScraperManager] Killing existing processes...")
             
             # Kill main scraper processes using specific path to avoid killing the bot
+            # Use asyncio.to_thread to avoid blocking the event loop
             try:
-                result = subprocess.run(['pkill', '-f', '/home/ubuntu/yad2bot_scraper/scraper/main.py'], capture_output=True, text=True, timeout=5)
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    ['pkill', '-f', '/home/ubuntu/yad2bot_scraper/scraper/main.py'],
+                    capture_output=True, text=True, timeout=5
+                )
                 if result.returncode == 0:
                     logger.info("[ScraperManager] Killed existing scraper main.py processes")
             except Exception as e:
                 logger.warning(f"[ScraperManager] Error killing scraper main.py processes: {e}")
             
             # Kill phone extractor processes
+            # Use asyncio.to_thread to avoid blocking the event loop
             try:
-                result = subprocess.run(['pkill', '-f', 'phone_extractor'], capture_output=True, text=True, timeout=5)
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    ['pkill', '-f', 'phone_extractor'],
+                    capture_output=True, text=True, timeout=5
+                )
                 if result.returncode == 0:
                     logger.info("[ScraperManager] Killed existing phone extractor processes")
             except Exception as e:
