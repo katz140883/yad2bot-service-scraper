@@ -71,7 +71,7 @@ class BotHandlers:
                     InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data='scraper_menu')
                 ],
                 [
-                    InlineKeyboardButton("ℹ️ אינפורמציה ℹ️", callback_data='show_info')
+                    InlineKeyboardButton("אינפורמציה", callback_data='show_info')
                 ]
             ]
             
@@ -460,7 +460,7 @@ class BotHandlers:
                 InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data='scraper_menu')
             ],
             [
-                InlineKeyboardButton("ℹ️ אינפורמציה ℹ️", callback_data='show_info')
+                InlineKeyboardButton("אינפורמציה", callback_data='show_info')
             ]
         ]
         
