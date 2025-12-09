@@ -477,13 +477,13 @@ class BotHandlers:
             query = update.callback_query
             await query.answer()
             
-            # Send the technical documentation file
-            doc_path = '/home/ubuntu/yad2bot-service-scraper/Yad2Bot_Technical_Documentation.md'
+            # Send the technical documentation file (PDF)
+            doc_path = '/home/ubuntu/yad2bot-service-scraper/Yad2Bot_Technical_Documentation.pdf'
             
             await context.bot.send_document(
                 chat_id=query.message.chat_id,
                 document=open(doc_path, 'rb'),
-                filename='Yad2Bot_Technical_Documentation.md',
+                filename='Yad2Bot_Technical_Documentation.pdf',
                 caption="📚 **מסמך טכני מקיף**\n\nמידע מפורט על ארכיטקטורת הבוט, מנגנונים ואינטגרציית CRM."
             )
             
