@@ -480,15 +480,13 @@ class BotHandlers:
             # Send friendly user guide in code block
             guide_text = (
                 "```\n"
-                "🚀 מדריך שימוש מהיר\n"
-                "\n"
                 "⚡ התחל סריקה:\n"
-                "   בחר סוג נכס → סוג סינון → עיר\n"
-                "   הסריקה תתחיל ותקבל CSV + קישורי WhatsApp\n"
+                "   בחר סוג מודעה (השכרה/מכירה) → מספר דפים/מודעות חדשות → עיר\n"
+                "   תקבל CSV + קישורי WhatsApp\n"
                 "\n"
                 "⌚ תזמן סריקה:\n"
-                "   בחר שעה → סוג נכס → סוג סינון → עיר\n"
-                "   הבוט יסרוק אוטומטית כל יום בשעה שבחרת\n"
+                "   בחר שעה → סוג מודעה → מספר דפים/מודעות חדשות → עיר\n"
+                "   הבוט יסרוק אוטומטית כל יום\n"
                 "\n"
                 "📊 תוצאות:\n"
                 "   קובץ CSV עם כל הנתונים\n"
@@ -507,7 +505,7 @@ class BotHandlers:
                 chat_id=query.message.chat_id,
                 document=open(doc_path, 'rb'),
                 filename='Yad2Bot_Developer_Documentation.pdf',
-                caption="📚 מסמך טכני מפורט ל-Developers"
+                caption="Developer Documentation v1.0"
             )
             
             logger.info(f"User guide and technical documentation sent to user {query.from_user.id}")
