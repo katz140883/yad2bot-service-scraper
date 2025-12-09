@@ -750,12 +750,20 @@ class Yad2Scraper:
             duplicates_skipped = 0  # Counter for duplicate listings skipped
             page = 1
             # Set max pages based on filter type or explicit limit
-            if max_pages is None:
-                if filter_type == 'test':
-                    max_pages = 1  # Test scraping: only 1 page
-                else:
-                    max_pages = 10  # Check more pages since we're doing real date filtering
+            # Write debug info to file
+            with open('/tmp/scraper_debug.log', 'a') as f:
+                f.write(f"filter_type={filter_type}, max_pages={max_pages}\n")
+            logger.info(f"[DEBUG] Received max_pages parameter: {max_pages}")
+            # Force test mode to always use 1 page
+            if filter_type == 'test':
+                max_pages = 1  # Test scraping: always only 1 page
+            elif max_pages is None:
+                max_pages = 10  # Default: check more pages
             # else: use the provided max_pages value
+            logger.info(f"[DEBUG] Final max_pages value: {max_pages}")
+            # Write final value to file
+            with open('/tmp/scraper_debug.log', 'a') as f:
+                f.write(f"AFTER IF: filter_type={filter_type}, max_pages={max_pages}\n")
             
             while page <= max_pages:
                 # Check for cancellation flag
@@ -777,15 +785,23 @@ class Yad2Scraper:
                 # Extract Next.js data
                 nextjs_data = self.extract_nextjs_data(html_content)
                 if not nextjs_data:
-                    logger.warning(f"No Next.js data found on page {page}, trying next page")
+                    logger.warning(f"No Next.js data found on page {page}")
+                    if page >= max_pages:
+                        logger.info(f"Reached max_pages ({max_pages}), stopping")
+                        break
                     page += 1
+                    logger.info(f"Trying next page ({page}/{max_pages})")
                     continue
                 
                 # Extract raw listings from this page
                 raw_listings = self.extract_listings_from_nextjs(nextjs_data)
                 if not raw_listings:
-                    logger.info(f"No listings found on page {page}, trying next page")
+                    logger.info(f"No listings found on page {page}")
+                    if page >= max_pages:
+                        logger.info(f"Reached max_pages ({max_pages}), stopping")
+                        break
                     page += 1
+                    logger.info(f"Trying next page ({page}/{max_pages})")
                     continue
                 
                 logger.info(f"Found {len(raw_listings)} raw listings on page {page}")
