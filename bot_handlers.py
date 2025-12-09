@@ -851,18 +851,27 @@ class BotHandlers:
             success = self.scraper_manager.cancel_current_scraping(current_user_id)
             
             if success:
-                # Edit the message to show cancellation
-                try:
-                    await update.callback_query.message.edit_text("❌ הסריקה בוטלה.")
-                except Exception as e:
-                    logger.warning(f"Could not edit message: {e}")
                 logger.info(f"Scraping cancelled successfully for user {current_user_id}")
             else:
-                try:
-                    await update.callback_query.message.edit_text("⚠️ לא נמצאה פעולה פעילה לביטול")
-                except Exception as e:
-                    logger.warning(f"Could not edit message: {e}")
                 logger.info(f"No active scraping found for user {current_user_id}")
+            
+            # Return to main menu after cancellation - send new message with GIF
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
+                    InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # Send GIF with main menu (using file_id for instant sending)
+            await self.bot.send_animation(
+                chat_id=chat_id,
+                animation="CgACAgQAAxkDAAICYGk3beqnCTNllztcH0o5JArgO_RXAAIHHwACOya5UQ9R2fn6D5JRNgQ",
+                reply_markup=reply_markup
+            )
             
         except Exception as e:
             logger.error(f"Error in cancel scraping handler: {e}", exc_info=True)
@@ -2048,9 +2057,11 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
                 )
                 
                 keyboard = [
-                    [InlineKeyboardButton("✨ הגדר תזמון חדש", callback_data='schedule_new')],
-                    [InlineKeyboardButton("❌ בטל תזמון נוכחי", callback_data='schedule_cancel')],
-                    [InlineKeyboardButton("🔙 חזרה לתפריט הראשי", callback_data='back_to_main')]
+                    [
+                        InlineKeyboardButton("❌ בטל תזמון נוכחי", callback_data='schedule_cancel'),
+                        InlineKeyboardButton("✨ הגדר תזמון חדש", callback_data='schedule_new')
+                    ],
+                    [InlineKeyboardButton("🔙 תפריט ראשי", callback_data='back_to_main')]
                 ]
             else:
                 # No active schedule
@@ -2062,7 +2073,7 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
                 
                 keyboard = [
                     [InlineKeyboardButton("✨ הגדר תזמון חדש", callback_data='schedule_new')],
-                    [InlineKeyboardButton("🔙 חזרה לתפריט הראשי", callback_data='back_to_main')]
+                    [InlineKeyboardButton("🔙 תפריט ראשי", callback_data='back_to_main')]
                 ]
             
             # Try to edit, if fails send new message
@@ -2167,12 +2178,20 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
     
     async def _handle_schedule_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle schedule cancellation"""
+        query = update.callback_query
+        user_id = update.effective_user.id
+        
         try:
-            from scheduler import scheduler
-            query = update.callback_query
-            user_id = update.effective_user.id
+            # Get scheduler from application context
+            from scraper_service_bot_main import application
+            if hasattr(application, '_scheduler'):
+                scheduler_instance = application._scheduler
+            else:
+                # Fallback: import and get global scheduler
+                import scheduler as scheduler_module
+                scheduler_instance = scheduler_module.scheduler
             
-            success = await scheduler.cancel_user_schedules(user_id)
+            success = await scheduler_instance.cancel_user_schedules(user_id)
             
             if success:
                 await query.answer("✅ התזמון בוטל בהצלחה!", show_alert=True)
@@ -2183,8 +2202,11 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
             await self._handle_schedule_menu(update, context)
             
         except Exception as e:
-            logger.error(f"Error in schedule cancel: {e}")
-            await query.answer("❌ שגיאה", show_alert=True)
+            logger.error(f"Error in schedule cancel: {e}", exc_info=True)
+            try:
+                await query.answer("❌ שגיאה", show_alert=True)
+            except:
+                pass
 
 
 # Global handlers instance

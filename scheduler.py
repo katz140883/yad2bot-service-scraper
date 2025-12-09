@@ -106,9 +106,50 @@ class BotScheduler:
             except Exception as e:
                 logger.error(f"Error sending notification: {e}")
             
-            # TODO: Run actual scrape
-            # This will be connected to scraper_manager in next phase
-            logger.info(f"Scheduled scrape completed for user {user_id}")
+            # Run the actual scrape
+            try:
+                # Create a mock status message for scraper
+                class MockMessage:
+                    def __init__(self, chat_id):
+                        self.chat = type('obj', (object,), {'id': chat_id})
+                
+                status_message = MockMessage(user_id)
+                
+                # Create mock context
+                from telegram.ext import ContextTypes
+                context = type('obj', (object,), {
+                    'mode': mode,
+                    'filter_type': filter_type,
+                    'city_code': city,
+                    'bot': self.bot_instance
+                })
+                
+                # Run scraper
+                await self.scraper_manager.run_scraper_with_message(
+                    status_message=status_message,
+                    context=context,
+                    mode=mode,
+                    filter_type=filter_type,
+                    city_code=city,
+                    page_limit=1  # Single page for scheduled scrapes
+                )
+                
+                logger.info(f"✅ Scheduled scrape completed for user {user_id}")
+                
+                # Send completion notification
+                await self.bot_instance.send_message(
+                    chat_id=user_id,
+                    text=f"✅ **סריקה מתוזמנת הושלמה!**\n\n"
+                         f"התוצאות נשמרו ב-CRM.",
+                    parse_mode='Markdown'
+                )
+                
+            except Exception as scrape_error:
+                logger.error(f"Error running scheduled scrape: {scrape_error}")
+                await self.bot_instance.send_message(
+                    chat_id=user_id,
+                    text=f"❌ שגיאה בסריקה מתוזמנת: {str(scrape_error)}"
+                )
             
         except Exception as e:
             logger.error(f"Error in scheduled scrape: {e}")

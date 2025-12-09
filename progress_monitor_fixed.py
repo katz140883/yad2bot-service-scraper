@@ -36,7 +36,7 @@ class FixedProgressMonitor:
     
     def create_cancel_keyboard(self, language: str = 'hebrew'):
         """Create cancel button keyboard."""
-        cancel_text = "🛑 בטל סריקה" if language == 'hebrew' else "🛑 Cancel Scraping"
+        cancel_text = "⏹️ בטל סריקה" if language == 'hebrew' else "⏹️ Cancel Scraping"
         cancel_button = InlineKeyboardButton(cancel_text, callback_data="CANCEL_SCRAPE")
         return InlineKeyboardMarkup([[cancel_button]])
     

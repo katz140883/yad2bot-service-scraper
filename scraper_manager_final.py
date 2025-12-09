@@ -96,13 +96,13 @@ class FinalScraperManager:
         processes_killed = False
         
         try:
-            # Kill main scraper processes
-            result = subprocess.run(['pkill', '-f', 'main.py'], capture_output=True, text=True, timeout=5)
+            # Kill main scraper processes (specific path to avoid killing bot)
+            result = subprocess.run(['pkill', '-f', '/yad2bot_scraper/main.py'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                logger.info("[ScraperManager] Killed main.py processes")
+                logger.info("[ScraperManager] Killed scraper main.py processes")
                 processes_killed = True
         except Exception as e:
-            logger.warning(f"[ScraperManager] Error killing main.py: {e}")
+            logger.warning(f"[ScraperManager] Error killing scraper main.py: {e}")
         
         try:
             # Kill phone extractor processes
