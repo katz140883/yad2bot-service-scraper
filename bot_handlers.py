@@ -892,8 +892,47 @@ class BotHandlers:
             
             keyboard = [
                 [
-                    InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
-                    InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data="schedule_menu"),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data="scraper_menu")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️", callback_data="show_info")
+                ]
+            ]
+            keyboard = [
+                [
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data="schedule_menu"),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data="scraper_menu")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️", callback_data="show_info")
+                ]
+            ]
+            keyboard = [
+                [
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data="schedule_menu"),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data="scraper_menu")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️", callback_data="show_info")
+                ]
+            ]
+            keyboard = [
+                [
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data="schedule_menu"),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data="scraper_menu")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️", callback_data="show_info")
+                ]
+            ]
+            keyboard = [
+                [
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data="schedule_menu"),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data="scraper_menu")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️", callback_data="show_info")
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -932,7 +971,11 @@ class BotHandlers:
             context.user_data['page_limit'] = page_limit
         else:
             filter_type = parts[3]  # today, all, or test
-            context.user_data['page_limit'] = None  # No limit
+            # If test mode, set page_limit to 1
+            if filter_type == 'test':
+                context.user_data['page_limit'] = 1
+            else:
+                context.user_data['page_limit'] = None  # No limit
         
         logger.info(f"Extracted mode: {mode}, filter: {filter_type}")
         
@@ -945,13 +988,13 @@ class BotHandlers:
         filter_text_map = {
             "today": "מודעות חדשות",
             "all": "כל המודעות",
-            "test": "בדיקה"
+            "test": "דף אחד"
         }
         filter_text = filter_text_map.get(filter_type, filter_type)
         
-        # Add page limit info if exists
+        # Add page limit info if exists (but not for test mode)
         page_limit = context.user_data.get('page_limit')
-        if page_limit:
+        if page_limit and filter_type != 'test':
             filter_text = f"כל המודעות ({page_limit} דפים)"
         
         summary_text = f"בחרת לבצע:\nסוג מודעות: {mode_text}\nסוג סריקה: {filter_text}\n\n"

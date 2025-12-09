@@ -26,7 +26,7 @@ class FinalScraperManager:
     """Final scraper manager with all critical issues fixed."""
     
     def __init__(self):
-        self.scraper_script = "/home/ubuntu/yad2bot_scraper/scraper/main.py"
+        self.scraper_script = "/root/yad2bot-service-scraper/yad2bot_scraper/scraper/main.py"
         self.bot_instance = None
         self.active_sessions = {}  # user_id -> session_data
         self.progress_monitor = FixedProgressMonitor()
@@ -51,7 +51,7 @@ class FinalScraperManager:
         # Create cancel flag files for all possible scraping sessions
         try:
             import glob
-            data_dir = "/home/ubuntu/yad2bot_scraper/data"
+            data_dir = "/root/yad2bot-service-scraper/yad2bot_scraper/data"
             today_str = datetime.now().strftime('%Y-%m-%d')
             
             # Create cancel flags for all possible combinations
@@ -145,25 +145,33 @@ class FinalScraperManager:
         try:
             logger.info("[ScraperManager] Cleaning up old files - START")
             
-            # Clean up old progress files
-            progress_pattern = "/home/ubuntu/yad2bot_scraper/data/*_progress.json"
-            logger.info(f"[ScraperManager] Looking for progress files: {progress_pattern}")
+            # Clean up old progress files (both regular and checking progress)
+            progress_patterns = [
+                "/root/yad2bot-service-scraper/yad2bot_scraper/data/*_progress.json",
+                "/root/yad2bot-service-scraper/yad2bot_scraper/data/*_checking_progress.json",
+                "/home/ubuntu/yad2bot_scraper/data/*_progress.json",
+                "/home/ubuntu/yad2bot_scraper/data/*_checking_progress.json"
+            ]
             
-            # Use asyncio.to_thread for glob.glob (non-blocking)
-            progress_files = await asyncio.to_thread(glob.glob, progress_pattern)
-            logger.info(f"[ScraperManager] Found {len(progress_files)} progress files")
+            all_progress_files = []
+            for pattern in progress_patterns:
+                logger.info(f"[ScraperManager] Looking for progress files: {pattern}")
+                files = await asyncio.to_thread(glob.glob, pattern)
+                all_progress_files.extend(files)
+            
+            logger.info(f"[ScraperManager] Found {len(all_progress_files)} total progress files")
             
             # Parallel deletion of progress files
-            if progress_files:
+            if all_progress_files:
                 await asyncio.gather(
-                    *[asyncio.to_thread(os.remove, f) for f in progress_files],
+                    *[asyncio.to_thread(os.remove, f) for f in all_progress_files],
                     return_exceptions=True
                 )
-                logger.info(f"[ScraperManager] Removed {len(progress_files)} progress files")
+                logger.info(f"[ScraperManager] Removed {len(all_progress_files)} progress files")
             
             # Clean up today's CSV files to force new scan
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
+            csv_pattern = f"/root/yad2bot-service-scraper/yad2bot_scraper/data/*{today}*.csv"
             
             # Use asyncio.to_thread for glob.glob (non-blocking)
             csv_files = await asyncio.to_thread(glob.glob, csv_pattern)
@@ -191,7 +199,7 @@ class FinalScraperManager:
             try:
                 result = await asyncio.to_thread(
                     subprocess.run,
-                    ['pkill', '-f', '/home/ubuntu/yad2bot_scraper/scraper/main.py'],
+                    ['pkill', '-f', '/root/yad2bot-service-scraper/yad2bot_scraper/scraper/main.py'],
                     capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
@@ -234,7 +242,7 @@ class FinalScraperManager:
             if language == 'hebrew':
                 mode_text = "השכרה" if mode == 'rent' else "מכירה"
                 if filter_type == 'test':
-                    filter_text = "מודעות בדיקה"
+                    filter_text = "דף אחד"
                 elif filter_type == 'today':
                     filter_text = "מודעות מהיום"
                 else:
@@ -467,7 +475,7 @@ class FinalScraperManager:
             try:
                 import os
                 import glob
-                data_dir = '/home/ubuntu/yad2bot_scraper/data'
+                data_dir = '/root/yad2bot-service-scraper/yad2bot_scraper/data'
                 
                 # Find the most recent checking_progress file
                 progress_files = glob.glob(os.path.join(data_dir, '*_checking_progress.json'))

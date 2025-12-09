@@ -90,7 +90,8 @@ class FixedProgressMonitor:
                         progress_files.extend(glob.glob(pattern))
                     
                     if progress_files:
-                        progress_file = progress_files[0]  # Take the first match
+                        # Sort by modification time and take the newest file
+                        progress_file = max(progress_files, key=os.path.getmtime)
                         
                         with open(progress_file, 'r', encoding='utf-8') as f:
                             progress_data = json.load(f)
