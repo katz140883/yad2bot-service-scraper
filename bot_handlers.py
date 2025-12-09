@@ -477,9 +477,8 @@ class BotHandlers:
             query = update.callback_query
             await query.answer()
             
-            # Send friendly user guide in code block
+            # Send friendly user guide as plain text
             guide_text = (
-                "```\n"
                 "⚡ התחל סריקה:\n"
                 "סוג מודעה → דפים → עיר\n"
                 "\n"
@@ -489,19 +488,18 @@ class BotHandlers:
                 "📊 תוצאות:\n"
                 "CSV + CRM אוטומטי\n"
                 "\n"
-                "⏹️ ביטול בזמן סריקה\n"
-                "```"
+                "⏹️ ביטול בזמן סריקה"
             )
             
-            await query.message.reply_text(guide_text, parse_mode='Markdown')
+            await query.message.reply_text(guide_text)
             
-            # Send the technical documentation file (PDF) with new professional name
-            doc_path = '/home/ubuntu/yad2bot-service-scraper/Yad2Bot_Developer_Documentation.pdf'
+            # Send the technical documentation file (PDF)
+            doc_path = '/home/ubuntu/yad2bot-service-scraper/service scraper v1.0.pdf'
             
             await context.bot.send_document(
                 chat_id=query.message.chat_id,
                 document=open(doc_path, 'rb'),
-                filename='Yad2Bot_Developer_Documentation.pdf',
+                filename='service scraper v1.0.pdf',
                 caption="Developer Documentation v1.0"
             )
             
