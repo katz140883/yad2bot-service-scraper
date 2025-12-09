@@ -67,8 +67,11 @@ class BotHandlers:
             # Send welcome GIF with keyboard (no caption)
             keyboard = [
                 [
-                    InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
-                    InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
+                    InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data='schedule_menu'),
+                    InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data='scraper_menu')
+                ],
+                [
+                    InlineKeyboardButton("ℹ️ אינפורמציה ℹ️", callback_data='show_info')
                 ]
             ]
             
@@ -108,7 +111,11 @@ class BotHandlers:
                 await self._handle_back_to_main(update, context)
             
             elif callback_data == 'show_main_menu':
-                await self._handle_show_main_menu(update, context)            
+                await self._handle_show_main_menu(update, context)
+            
+            elif callback_data == 'show_info':
+                await self._handle_show_info(update, context)
+            
             elif callback_data == 'scraper_menu':
                 await self._handle_scraper_menu(update, context)
             
@@ -449,8 +456,11 @@ class BotHandlers:
         # Send welcome GIF with keyboard (same as /start, no caption)
         keyboard = [
             [
-                InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
-                InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
+                InlineKeyboardButton("⌚ תזמן סריקה ⌚", callback_data='schedule_menu'),
+                InlineKeyboardButton("⚡ התחל סריקה ⚡", callback_data='scraper_menu')
+            ],
+            [
+                InlineKeyboardButton("ℹ️ אינפורמציה ℹ️", callback_data='show_info')
             ]
         ]
         
@@ -460,6 +470,28 @@ class BotHandlers:
             animation="CgACAgQAAxkDAAICYGk3beqnCTNllztcH0o5JArgO_RXAAIHHwACOya5UQ9R2fn6D5JRNgQ",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+    
+    async def _handle_show_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle show info button - send technical documentation"""
+        try:
+            query = update.callback_query
+            await query.answer()
+            
+            # Send the technical documentation file
+            doc_path = '/home/ubuntu/yad2bot-service-scraper/Yad2Bot_Technical_Documentation.md'
+            
+            await context.bot.send_document(
+                chat_id=query.message.chat_id,
+                document=open(doc_path, 'rb'),
+                filename='Yad2Bot_Technical_Documentation.md',
+                caption="📚 **מסמך טכני מקיף**\n\nמידע מפורט על ארכיטקטורת הבוט, מנגנונים ואינטגרציית CRM."
+            )
+            
+            logger.info(f"Technical documentation sent to user {query.from_user.id}")
+            
+        except Exception as e:
+            logger.error(f"Error sending technical documentation: {e}")
+            await query.message.reply_text("⚠️ שגיאה בשליחת המסמך. נסה שוב.")
     
     async def results_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /results command"""
