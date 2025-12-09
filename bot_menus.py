@@ -109,8 +109,6 @@ class MenuManager:
         """Create scraper rent submenu"""
         keyboard = [
             [InlineKeyboardButton("🆕 מהיום", callback_data='city_selection_rent_today'),
-             InlineKeyboardButton("🔑 כללי", callback_data='city_selection_rent_all')],
-            [InlineKeyboardButton("⏰ תזמון", callback_data='schedule_scraping_rent'),
              InlineKeyboardButton("📄 דף אחד", callback_data='city_selection_rent_test')],
             [InlineKeyboardButton("📊 25 דפים", callback_data='city_selection_rent_pages_25'),
              InlineKeyboardButton("📊 50 דפים", callback_data='city_selection_rent_pages_50')],
@@ -124,8 +122,6 @@ class MenuManager:
         """Create scraper sale submenu"""
         keyboard = [
             [InlineKeyboardButton("🆕 מהיום", callback_data='city_selection_sale_today'),
-             InlineKeyboardButton("🏠 כללי", callback_data='city_selection_sale_all')],
-            [InlineKeyboardButton("⏰ תזמון", callback_data='schedule_scraping_sale'),
              InlineKeyboardButton("📄 דף אחד", callback_data='city_selection_sale_test')],
             [InlineKeyboardButton("📊 25 דפים", callback_data='city_selection_sale_pages_25'),
              InlineKeyboardButton("📊 50 דפים", callback_data='city_selection_sale_pages_50')],

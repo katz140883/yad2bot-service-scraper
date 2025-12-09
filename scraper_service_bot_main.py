@@ -33,6 +33,18 @@ async def start_command(update, context):
 async def handle_message(update, context):
     pass
 
+async def post_init(application):
+    """Initialize scheduler after application starts"""
+    from scheduler import scheduler
+    
+    # Set bot instance and scraper manager
+    scheduler.set_bot_instance(application.bot)
+    scheduler.set_scraper_manager(handlers.scraper_manager)
+    
+    # Start scheduler
+    await scheduler.start()
+    logger.info("✅ Scheduler started and loaded")
+
 def main():
     global handlers
     
@@ -44,6 +56,9 @@ def main():
     handlers.bot = application.bot
     handlers.scraper_manager.set_bot_instance(application.bot)
     logger.info("✅ Bot instance set")
+    
+    # Register post_init callback
+    application.post_init = post_init
     
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CallbackQueryHandler(handlers.button_callback))

@@ -64,19 +64,11 @@ class BotHandlers:
             # Initialize user in database
             db.add_user(user_id, user_name)
             
-            # Send welcome GIF with caption and keyboard
-            welcome_text = (
-                "👋 היי טוב לראות אותך! 🚀\n\n"
-                "כאן תוכל לעשות סריקות ועדכונים ל-CRM של Yad2bot:\n\n"
-                "🔍 סרוק מודעות חדשות\n"
-                "📊 צפה בתוצאות הסריקה\n"
-                "📋 עדכן את מאגר הנתונים\n"
-                "⏰ תזמון סריקת מודעות\n\n"
-                "בואו נתחיל! בחר פעולה מהתפריט:"
-            )
+            # Send welcome GIF with keyboard (no caption)
             keyboard = [
                 [
-                    InlineKeyboardButton("🚀 התחל סריקה", callback_data='scraper_menu')
+                    InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
+                    InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
                 ]
             ]
             
@@ -84,7 +76,6 @@ class BotHandlers:
             await context.bot.send_animation(
                 chat_id=update.message.chat_id,
                 animation="CgACAgQAAxkDAAICYGk3beqnCTNllztcH0o5JArgO_RXAAIHHwACOya5UQ9R2fn6D5JRNgQ",
-                caption=welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             
@@ -120,6 +111,9 @@ class BotHandlers:
                 await self._handle_show_main_menu(update, context)            
             elif callback_data == 'scraper_menu':
                 await self._handle_scraper_menu(update, context)
+            
+            elif callback_data == 'schedule_menu':
+                await self._handle_schedule_menu(update, context)
             
             elif callback_data == 'run_scraper':
                 await self._handle_scraper_menu(update, context)
@@ -192,6 +186,15 @@ class BotHandlers:
             elif callback_data.startswith('cancel_scraping_'):
                 await self._handle_cancel_scraping(update, context, callback_data)
                 return  # Important: return immediately after handling cancel
+            
+            elif callback_data == 'schedule_new':
+                await self._handle_schedule_new(update, context)
+            
+            elif callback_data == 'schedule_cancel':
+                await self._handle_schedule_cancel(update, context)
+            
+            elif callback_data.startswith('schedule_hour_'):
+                await self._handle_schedule_hour_selected(update, context, callback_data)
             
             elif callback_data.startswith('schedule_'):
                 await self._handle_schedule_action(update, context, callback_data)
@@ -440,33 +443,23 @@ class BotHandlers:
             logger.error(f"Error showing main menu: {e}")
     
     async def _handle_back_to_main(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle back to main menu - show CRM welcome message"""
+        """Handle back to main menu - show start message with GIF"""
         user_id = update.effective_user.id
         
-        # Send CRM welcome message
-        welcome_text = """👋 היי Admin, ברוך הבא לסקריפר! 🚀
-
-כאן תוכל לעשות סריקות ועדכונים ל-CRM של Yad2bot:
-
-🔍 סרוק מודעות חדשות
-📊 צפה בתוצאות הסריקה
-💾 עדכן את מאגר הנתונים
-⏰ תזמון סריקת מודעות
-
-בואו נתחיל! בחר פעולה מהתפריט:"""
+        # Send welcome GIF with keyboard (same as /start, no caption)
+        keyboard = [
+            [
+                InlineKeyboardButton("⚡ התחל סריקה", callback_data='scraper_menu'),
+                InlineKeyboardButton("⌚ תזמן סריקה", callback_data='schedule_menu')
+            ]
+        ]
         
-        # Send sticker
-        sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
-        await context.bot.send_sticker(chat_id=update.callback_query.message.chat_id, sticker=sticker_id)
-        
-        # Send welcome message
-        await context.bot.send_message(
+        # Use file_id for instant sending (no upload needed)
+        await context.bot.send_animation(
             chat_id=update.callback_query.message.chat_id,
-            text=welcome_text
+            animation="CgACAgQAAxkDAAICYGk3beqnCTNllztcH0o5JArgO_RXAAIHHwACOya5UQ9R2fn6D5JRNgQ",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        
-        # Send main menu
-        await self._handle_scraper_menu(update, context)
     
     async def results_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /results command"""
@@ -782,6 +775,53 @@ class BotHandlers:
             mode = context.user_data.get('scraper_mode', 'rent')
             filter_type = context.user_data.get('scraper_filter', 'today')
             page_limit = context.user_data.get('page_limit', None)
+            
+            # Check if we're in schedule mode
+            if context.user_data.get('in_schedule_mode'):
+                # Save schedule instead of running scraper
+                from scheduler import scheduler
+                hour = context.user_data.get('schedule_hour', 10)
+                
+                success = await scheduler.add_schedule(
+                    user_id=update.effective_user.id,
+                    mode=mode,
+                    filter_type=filter_type,
+                    city=city_name,
+                    hour=hour,
+                    minute=0
+                )
+                
+                # Clear schedule mode
+                context.user_data['in_schedule_mode'] = False
+                context.user_data.pop('schedule_hour', None)
+                
+                if success:
+                    mode_text = "השכרה" if mode == 'rent' else "מכירה"
+                    filter_text = "מהיום בלבד" if filter_type == 'today' else "כללי"
+                    
+                    await update.callback_query.answer("✅ התזמון הוגדר בהצלחה!", show_alert=True)
+                    
+                    message = (
+                        "✅ **התזמון הוגדר בהצלחה!**\n\n"
+                        "**פרטי התזמון:**\n"
+                        f"🏠 {mode_text} - {filter_text}\n"
+                        f"📍 {city_name}\n"
+                        f"⏰ כל יום בשעה {hour:02d}:00"
+                    )
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("🔙 חזרה לתפריט הראשי", callback_data='back_to_main')]
+                    ]
+                    
+                    await update.callback_query.edit_message_text(
+                        text=message,
+                        reply_markup=InlineKeyboardMarkup(keyboard),
+                        parse_mode='Markdown'
+                    )
+                else:
+                    await update.callback_query.answer("❌ שגיאה בהגדרת התזמון", show_alert=True)
+                
+                return
             
             # Start scraping with real-time updates and cancel button
             # Use the existing callback message instead of creating a new one
@@ -1972,6 +2012,179 @@ https://t.me/yad2bot_bot?start=ref_{user_id}
         except Exception as e:
             logger.error(f"Error in rent_to_sale_agent: {e}")
             await query.answer("❌ שגיאה בתחילת התהליך", show_alert=True)
+
+
+    async def _handle_schedule_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle schedule menu - show current schedule or create new"""
+        try:
+            from scheduler import scheduler
+            query = update.callback_query
+            user_id = update.effective_user.id
+            
+            # Send sticker first
+            sticker_id = "CAACAgIAAxkBAAEP7xhpMHJ_HJWH51hm372vIXwHiOiFLAAClAsAAoSLEUrkF8J7k7Pq0jYE"
+            await context.bot.send_sticker(
+                chat_id=query.message.chat_id,
+                sticker=sticker_id
+            )
+            
+            # Get current schedule
+            schedule_info = scheduler.get_user_schedule_info(user_id)
+            
+            if schedule_info:
+                # User has active schedule
+                mode_text = "השכרה" if schedule_info['mode'] == 'rent' else "מכירה"
+                filter_text = "מהיום בלבד" if schedule_info['filter_type'] == 'today' else "כללי"
+                city = schedule_info.get('city', 'לא צוין')
+                hour = schedule_info['hour']
+                minute = schedule_info.get('minute', 0)
+                
+                message = (
+                    "**⏰ הגדרת תזמון סריקה יומי**\n\n"
+                    "**סטטוס נוכחי:** 🟢 סריקה יומית מתוזמנת\n"
+                    f"**סוג:** {mode_text} - {filter_text}\n"
+                    f"**עיר:** {city}\n"
+                    f"**שעה:** {hour:02d}:{minute:02d}"
+                )
+                
+                keyboard = [
+                    [InlineKeyboardButton("✨ הגדר תזמון חדש", callback_data='schedule_new')],
+                    [InlineKeyboardButton("❌ בטל תזמון נוכחי", callback_data='schedule_cancel')],
+                    [InlineKeyboardButton("🔙 חזרה לתפריט הראשי", callback_data='back_to_main')]
+                ]
+            else:
+                # No active schedule
+                message = (
+                    "**⏰ הגדרת תזמון סריקה יומי**\n\n"
+                    "המערכת תסרוק עבורך מודעות באופן אוטומטי כל יום בשעה שתבחר.\n\n"
+                    "**סטטוס נוכחי:** 🔴 לא הוגדר תזמון."
+                )
+                
+                keyboard = [
+                    [InlineKeyboardButton("✨ הגדר תזמון חדש", callback_data='schedule_new')],
+                    [InlineKeyboardButton("🔙 חזרה לתפריט הראשי", callback_data='back_to_main')]
+                ]
+            
+            # Try to edit, if fails send new message
+            try:
+                await query.edit_message_text(
+                    text=message,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+            except Exception as edit_error:
+                # If edit fails (e.g., message is a GIF), send new message
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text=message,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+            
+        except Exception as e:
+            logger.error(f"Error in schedule menu: {e}")
+            try:
+                await query.edit_message_text("שגיאה בטעינת תפריט התזמון. נסה שוב.")
+            except:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="שגיאה בטעינת תפריט התזמון. נסה שוב."
+                )
+    
+    async def _handle_schedule_new(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle new schedule - show hour selection"""
+        try:
+            query = update.callback_query
+            
+            message = (
+                "⏰ **תזמון סריקת מודעות**\n\n"
+                "בואו נתחיל! בחר פעולה מהתפריט:\n\n"
+                "**באיזו שעה תרצה שהסריקה תרוץ?**\n"
+                "(השעה היא לפי שעון ישראל)"
+            )
+            
+            # Create hour selection keyboard - only 4 time options
+            keyboard = [
+                [
+                    InlineKeyboardButton("09:00", callback_data='schedule_hour_9'),
+                    InlineKeyboardButton("12:00", callback_data='schedule_hour_12')
+                ],
+                [
+                    InlineKeyboardButton("18:00", callback_data='schedule_hour_18'),
+                    InlineKeyboardButton("21:00", callback_data='schedule_hour_21')
+                ],
+                [InlineKeyboardButton("🔙 חזרה", callback_data='schedule_menu')]
+            ]
+            
+            await query.edit_message_text(
+                text=message,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in schedule new: {e}")
+            await query.edit_message_text("שגיאה. נסה שוב.")
+    
+    async def _handle_schedule_hour_selected(self, update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str):
+        """Handle hour selection - save and move to scraper flow"""
+        try:
+            query = update.callback_query
+            user_id = update.effective_user.id
+            
+            # Extract hour from callback_data (schedule_hour_10 -> 10)
+            hour = int(callback_data.split('_')[-1])
+            
+            # Save hour in context
+            context.user_data['schedule_hour'] = hour
+            context.user_data['in_schedule_mode'] = True
+            
+            # Show confirmation and move to scraper type selection
+            message = (
+                f"✅ **השעה נבחרה: {hour:02d}:00**\n\n"
+                "עכשיו בחר סוג סריקה:"
+            )
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("🏠 השכרה", callback_data='scraper_rent'),
+                    InlineKeyboardButton("🏢 מכירה", callback_data='scraper_sale')
+                ],
+                [InlineKeyboardButton("🔙 חזרה", callback_data='schedule_menu')]
+            ]
+            
+            await query.edit_message_text(
+                text=message,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"User {user_id} selected hour {hour} for schedule")
+            
+        except Exception as e:
+            logger.error(f"Error in schedule hour selection: {e}")
+            await query.edit_message_text("שגיאה. נסה שוב.")
+    
+    async def _handle_schedule_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle schedule cancellation"""
+        try:
+            from scheduler import scheduler
+            query = update.callback_query
+            user_id = update.effective_user.id
+            
+            success = await scheduler.cancel_user_schedules(user_id)
+            
+            if success:
+                await query.answer("✅ התזמון בוטל בהצלחה!", show_alert=True)
+            else:
+                await query.answer("❌ שגיאה בביטול התזמון", show_alert=True)
+            
+            # Return to schedule menu
+            await self._handle_schedule_menu(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in schedule cancel: {e}")
+            await query.answer("❌ שגיאה", show_alert=True)
 
 
 # Global handlers instance
