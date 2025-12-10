@@ -146,6 +146,8 @@ class FinalScraperManager:
             logger.info("[ScraperManager] Cleaning up old files - START")
             
             # Clean up old progress files (both regular and checking progress)
+            # BUT keep today's checking_progress files for duplicate counting
+            today = datetime.now().strftime('%Y-%m-%d')
             progress_patterns = [
                 "/root/yad2bot-service-scraper/yad2bot_scraper/data/*_progress.json",
                 "/root/yad2bot-service-scraper/yad2bot_scraper/data/*_checking_progress.json",
@@ -157,9 +159,14 @@ class FinalScraperManager:
             for pattern in progress_patterns:
                 logger.info(f"[ScraperManager] Looking for progress files: {pattern}")
                 files = await asyncio.to_thread(glob.glob, pattern)
-                all_progress_files.extend(files)
+                # Filter out today's checking_progress files
+                for f in files:
+                    if '_checking_progress.json' in f and today in f:
+                        logger.info(f"[ScraperManager] Keeping today's checking_progress: {f}")
+                        continue
+                    all_progress_files.append(f)
             
-            logger.info(f"[ScraperManager] Found {len(all_progress_files)} total progress files")
+            logger.info(f"[ScraperManager] Found {len(all_progress_files)} progress files to delete")
             
             # Parallel deletion of progress files
             if all_progress_files:
