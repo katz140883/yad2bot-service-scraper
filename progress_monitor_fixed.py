@@ -107,18 +107,21 @@ class FixedProgressMonitor:
                         city_name = progress_data.get('city_name', '')
                         filter_type = progress_data.get('filter_type', '')
                         
+                        # Build title line only if title exists
+                        title_line = f"\n📋 {title}" if title else ""
+                        
                         if language == 'hebrew':
                             # Show 'מהיום' only if filter_type is 'today'
                             if filter_type == 'today':
-                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📄 דף {current_page}/{total_pages}\n📋 {title}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
+                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📄 דף {current_page}/{total_pages}{title_line}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
                             else:
-                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📄 דף {current_page}/{total_pages}\n📋 {title}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
+                                progress_msg = f"שלב 1/2\nסריקת מודעות\n\n🔍 בודק מודעה {current}/{total}\n📄 דף {current_page}/{total_pages}{title_line}\n\n✅ נמצאו: {found} מודעות\n⏭️ כפילויות: {duplicates}"
                         else:
                             # Show 'recent' only if filter_type is 'today'
                             if filter_type == 'today':
-                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📄 Page {current_page}/{total_pages}\n📋 {title}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
+                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📄 Page {current_page}/{total_pages}{title_line}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
                             else:
-                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📄 Page {current_page}/{total_pages}\n📋 {title}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
+                                progress_msg = f"Step 1/2\nScanning Listings\n\n🔍 Checking listing {current}/{total}\n📄 Page {current_page}/{total_pages}{title_line}\n\n✅ Found: {found} listings\n⏭️ Duplicates: {duplicates}"
                         
                         full_message = f"{selection_info}\n\n{progress_msg}\n\n⏹️ לחץ על כפתור הביטול כדי לעצור את הסריקה" if language == 'hebrew' else f"{selection_info}\n\n{progress_msg}\n\n⏹️ Click cancel button to stop scraping"
                         
