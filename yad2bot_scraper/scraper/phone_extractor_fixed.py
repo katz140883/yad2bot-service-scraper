@@ -112,13 +112,13 @@ class FixedPhoneExtractor:
         try:
             logger.info(f"Extracting details from: {listing_url}")
             
-            # Improved JavaScript with longer waits for reliability
+            # Optimized JavaScript waits for better performance while maintaining reliability
             js_instructions = [
-                {"wait": 2000},   # 2 seconds to load page
+                {"wait": 1500},   # 1.5 seconds to load page (reduced from 2)
                 {"click": "button:contains('הצגת מספר טלפון')"},
-                {"wait": 3000},   # 3 seconds for phone to appear
+                {"wait": 2000},   # 2 seconds for phone to appear (reduced from 3)
                 {"click": "[data-testid*='phone'], .phone-button, button[aria-label*='טלפון']"},
-                {"wait": 2000}    # 2 seconds additional wait
+                {"wait": 1000}    # 1 second additional wait (reduced from 2)
             ]
             
             params = {
@@ -128,7 +128,7 @@ class FixedPhoneExtractor:
                 'premium_proxy': 'true',
                 'proxy_country': 'il',
                 'js_instructions': json.dumps(js_instructions),
-                'wait': '7000'  # Total 7 seconds wait
+                'wait': '5000'  # Total 5 seconds wait (reduced from 7)
             }
             
             response = requests.get(ZENROWS_API_URL, params=params, timeout=60)
@@ -433,8 +433,8 @@ class FixedPhoneExtractor:
                     # Update progress after each extraction
                     self.update_progress(current_index, total_listings, phones_found, 'processing')
                     
-                    # Reasonable delay to prevent overwhelming the API
-                    time.sleep(1)
+                    # Reasonable delay to prevent overwhelming the API (reduced for better performance)
+                    time.sleep(0.5)
                 else:
                     # Skip listings that already have phones or no URL
                     if listing.get('phone_number') and listing.get('phone_number') != '0501234567':

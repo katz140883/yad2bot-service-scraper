@@ -765,6 +765,25 @@ class Yad2Scraper:
             with open('/tmp/scraper_debug.log', 'a') as f:
                 f.write(f"AFTER IF: filter_type={filter_type}, max_pages={max_pages}\n")
             
+            # Create initial progress file immediately so monitor can read correct max_pages
+            initial_progress_file = os.path.join(DATA_DIR, f"{city_name}_{mode}_{filter_type}_{today_str}_checking_progress.json")
+            try:
+                initial_progress_data = {
+                    "stage": "starting",
+                    "current_listing": 0,
+                    "total_listings_to_check": 0,
+                    "current_page": 1,
+                    "total_pages": max_pages,
+                    "city_name": city_name,
+                    "filter_type": filter_type,
+                    "message": "🔄 מתחיל סריקה..."
+                }
+                with open(initial_progress_file, 'w', encoding='utf-8') as f:
+                    json.dump(initial_progress_data, f, ensure_ascii=False, indent=2)
+                logger.info(f"Created initial progress file with max_pages={max_pages}")
+            except Exception as e:
+                logger.warning(f"Error creating initial progress file: {e}")
+            
             while page <= max_pages:
                 # Check for cancellation flag
                 cancel_file = os.path.join(DATA_DIR, f"{city_name}_{mode}_{filter_type}_{today_str}_cancel.flag")
