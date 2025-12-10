@@ -497,8 +497,8 @@ class FinalScraperManager:
             
             # Create success message
             if language == 'hebrew':
-                duplicates_line = f"\n⏭️ דולגו: {duplicates_count} כפילויות" if duplicates_count > 0 else ""
-                success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n📞 מספרי טלפון: {phone_count}{duplicates_line}\n\n📎 קובץ התוצאות מצורף"
+                # Always show duplicates count (even if 0)
+                success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n⏭️ כפילויות: {duplicates_count}\n🔍 מספרי טלפון: {phone_count}\n\n📎 קובץ התוצאות מצורף"
             else:
                 success_text = f"{selection_info}\n\n✅ Scraping completed successfully!\n\n📊 Found: {total_listings} listings\n📞 Phone numbers: {phone_count}\n\n📎 Results file attached"
             
