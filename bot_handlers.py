@@ -478,7 +478,7 @@ class BotHandlers:
             await query.answer()
             
             # Send the technical documentation file (PDF) only
-            doc_path = '/home/ubuntu/yad2bot-service-scraper/service scraper v1.0.pdf'
+            doc_path = '/root/yad2bot-service-scraper/service scraper v1.0.pdf'
             
             await context.bot.send_document(
                 chat_id=query.message.chat_id,
