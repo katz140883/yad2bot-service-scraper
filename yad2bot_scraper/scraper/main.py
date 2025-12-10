@@ -18,7 +18,7 @@ import requests
 from bs4 import BeautifulSoup
 
 # Import database check function
-sys.path.insert(0, '/home/ubuntu/yad2bot-service-scraper')
+sys.path.insert(0, '/root/yad2bot-service-scraper')
 try:
     from database import check_lead_exists_in_mysql
     DB_CHECK_AVAILABLE = True
