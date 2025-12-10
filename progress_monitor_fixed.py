@@ -40,7 +40,7 @@ class FixedProgressMonitor:
         cancel_button = InlineKeyboardButton(cancel_text, callback_data="CANCEL_SCRAPE")
         return InlineKeyboardMarkup([[cancel_button]])
     
-    async def monitor_scraper_progress(self, status_message, language: str, user_id: int, selection_info: str = ""):
+    async def monitor_scraper_progress(self, status_message, language: str, user_id: int, selection_info: str = "", city_name: str = None, mode: str = None, filter_type: str = None):
         """Monitor main scraper progress with real-time listing checking updates."""
         try:
             logger.info(f"[ProgressMonitor] Starting scraper progress monitoring for user {user_id}")
@@ -55,11 +55,20 @@ class FixedProgressMonitor:
             from datetime import date
             import glob
             today_str = date.today().strftime('%Y-%m-%d')
-            # Search for progress files with both old and new naming patterns
-            progress_patterns = [
-                f"/home/ubuntu/yad2bot_scraper/data/*{today_str}_checking_progress.json",
-                f"/home/ubuntu/yad2bot_scraper/data/*{today_str}*progress*.json"
-            ]
+            # Search for progress files with city and mode filter
+            if city_name and mode and filter_type:
+                progress_patterns = [
+                    f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}*{today_str}*_checking_progress.json",
+                    f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}*progress*.json"
+                ]
+                logger.info(f"[ProgressMonitor] Looking for progress files: {city_name}_{mode}_{filter_type}")
+            else:
+                # Fallback to old behavior
+                progress_patterns = [
+                    f"/home/ubuntu/yad2bot_scraper/data/*{today_str}_checking_progress.json",
+                    f"/home/ubuntu/yad2bot_scraper/data/*{today_str}*progress*.json"
+                ]
+                logger.warning(f"[ProgressMonitor] No city/mode specified, using fallback patterns")
             
             # Initial message with correct format
             initial_msg = "שלב 1/2\nסריקת מודעות\n\n🔄 מתחיל..." if language == 'hebrew' else "Step 1/2\nScanning Listings\n\n🔄 Starting..."
@@ -160,7 +169,7 @@ class FixedProgressMonitor:
         except Exception as e:
             logger.error(f"[ProgressMonitor] Error in scraper progress monitoring: {e}")
     
-    async def monitor_phone_extraction_progress(self, status_message, language: str, user_id: int, selection_info: str = ""):
+    async def monitor_phone_extraction_progress(self, status_message, language: str, user_id: int, selection_info: str = "", city_name: str = None, mode: str = None, filter_type: str = None):
         """Monitor phone extraction with real-time JSON progress reading."""
         try:
             logger.info(f"[ProgressMonitor] Starting phone extraction progress monitoring for user {user_id}")
@@ -182,7 +191,12 @@ class FixedProgressMonitor:
             
             # Find progress file pattern
             today = datetime.now().strftime('%Y-%m-%d')
-            progress_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_progress.json"
+            if city_name and mode and filter_type:
+                progress_pattern = f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}*{today}*_progress.json"
+                logger.info(f"[ProgressMonitor] Looking for phone progress: {city_name}_{mode}_{filter_type}")
+            else:
+                progress_pattern = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_progress.json"
+                logger.warning(f"[ProgressMonitor] No city/mode for phone extraction, using fallback")
             
             max_wait = 1800  # 30 minutes maximum
             wait_time = 0
@@ -300,14 +314,20 @@ class FixedProgressMonitor:
             logger.error(f"[ProgressMonitor] Error in phone extraction progress monitoring: {e}")
             return f"error: {str(e)}"
     
-    async def wait_for_results_file(self, user_id: int, timeout: int = 300):
+    async def wait_for_results_file(self, user_id: int, city_name: str = None, mode: str = None, filter_type: str = None, timeout: int = 300):
         """Wait for the final results CSV file to be created."""
         try:
             logger.info(f"[ProgressMonitor] Waiting for results file for user {user_id}")
             
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern_with_phones = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_with_phones.csv"
-            csv_pattern_regular = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
+            if city_name and mode and filter_type:
+                csv_pattern_with_phones = f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}*{today}*_with_phones.csv"
+                csv_pattern_regular = f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}*{today}*.csv"
+                logger.info(f"[ProgressMonitor] Looking for results file: {city_name}_{mode}_{filter_type}")
+            else:
+                csv_pattern_with_phones = f"/home/ubuntu/yad2bot_scraper/data/*{today}*_with_phones.csv"
+                csv_pattern_regular = f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
+                logger.warning(f"[ProgressMonitor] No city/mode for results file, using fallback")
             
             wait_time = 0
             while wait_time < timeout and not self.cancel_flag:

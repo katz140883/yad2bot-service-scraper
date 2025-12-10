@@ -326,6 +326,19 @@ class FinalScraperManager:
             selection_info = self.get_selection_info(context, language)
             
             # STEP 3: Create session
+            # Get city name for file matching
+            city_name_mapping = {
+                '5000': 'TelAviv',
+                '4000': 'Haifa',
+                '3000': 'Jerusalem',
+                '9000': 'BeerSheva',
+                '7400': 'Netanya',
+                '8300': 'RishonLeZion',
+                '7900': 'PetahTikva',
+                '0070': 'Ashdod'
+            }
+            city_name = city_name_mapping.get(city_code, 'Unknown') if city_code else None
+            
             session = {
                 'user_id': user_id,
                 'status_message': status_message,
@@ -334,6 +347,9 @@ class FinalScraperManager:
                 'context': context,
                 'language': language,
                 'selection_info': selection_info,
+                'city_name': city_name,
+                'mode': mode,
+                'filter_type': filter_type,
                 'process': None,
                 'monitor_task': None
             }
@@ -401,6 +417,9 @@ class FinalScraperManager:
         message_id = session.get('message_id')
         language = session['language']
         selection_info = session['selection_info']
+        city_name = session.get('city_name')
+        mode = session.get('mode')
+        filter_type = session.get('filter_type')
         process = session['process']
         
         try:
@@ -409,7 +428,7 @@ class FinalScraperManager:
             # PHASE 1: Monitor scraper progress with real-time updates
             logger.info(f"[Monitor] Starting scraper progress monitoring")
             await self.progress_monitor.monitor_scraper_progress(
-                status_message, language, user_id, selection_info
+                status_message, language, user_id, selection_info, city_name, mode, filter_type
             )
             logger.info(f"[Monitor] Scraper progress monitoring completed")
             
@@ -430,7 +449,7 @@ class FinalScraperManager:
             # PHASE 2: Monitor phone extraction progress
             logger.info(f"[Monitor] Calling monitor_phone_extraction_progress")
             result = await self.progress_monitor.monitor_phone_extraction_progress(
-                status_message, language, user_id, selection_info
+                status_message, language, user_id, selection_info, city_name, mode, filter_type
             )
             
             if result == "cancelled":
@@ -439,7 +458,7 @@ class FinalScraperManager:
             
             # PHASE 3: Wait for final results and send them
             logger.info(f"[Monitor] Waiting for final results file")
-            results_file = await self.progress_monitor.wait_for_results_file(user_id)
+            results_file = await self.progress_monitor.wait_for_results_file(user_id, city_name, mode, filter_type)
             
             if results_file:
                 await self._send_final_results(status_message, results_file, language, selection_info)
