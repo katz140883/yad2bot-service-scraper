@@ -498,9 +498,15 @@ class FinalScraperManager:
             # Create success message
             if language == 'hebrew':
                 # Always show duplicates count (even if 0)
-                success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n⏭️ כפילויות: {duplicates_count}\n🔍 מספרי טלפון: {phone_count}\n\n📎 קובץ התוצאות מצורף"
+                if phone_count > 0:
+                    success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n⏭️ כפילויות: {duplicates_count}\n🔍 מספרי טלפון: {phone_count}\n\n📎 קובץ התוצאות מצורף"
+                else:
+                    success_text = f"{selection_info}\n\n✅ הסריקה הושלמה בהצלחה!\n\n📊 נמצאו: {total_listings} מודעות\n⏭️ כפילויות: {duplicates_count}\n🔍 מספרי טלפון: {phone_count}\n\n💡 כל המודעות היו כפילויות, לא נמצאו מספרי טלפון חדשים"
             else:
-                success_text = f"{selection_info}\n\n✅ Scraping completed successfully!\n\n📊 Found: {total_listings} listings\n📞 Phone numbers: {phone_count}\n\n📎 Results file attached"
+                if phone_count > 0:
+                    success_text = f"{selection_info}\n\n✅ Scraping completed successfully!\n\n📊 Found: {total_listings} listings\n📞 Phone numbers: {phone_count}\n\n📎 Results file attached"
+                else:
+                    success_text = f"{selection_info}\n\n✅ Scraping completed successfully!\n\n📊 Found: {total_listings} listings\n📞 Phone numbers: {phone_count}\n\n💡 All listings were duplicates, no new phone numbers found"
             
             # Store results file path for WhatsApp flow
             user_id = status_message.chat.id
@@ -529,13 +535,21 @@ class FinalScraperManager:
             except Exception as e:
                 logger.error(f"[Results] Error sending sticker: {e}")
             
-            # Send results file with buttons
-            with open(results_file, 'rb') as f:
-                await status_message.get_bot().send_document(
+            # Send results file with buttons only if there are phone numbers
+            if phone_count > 0:
+                with open(results_file, 'rb') as f:
+                    await status_message.get_bot().send_document(
+                        chat_id=status_message.chat_id,
+                        document=f,
+                        filename=os.path.basename(results_file),
+                        caption=success_text,
+                        reply_markup=keyboard
+                    )
+            else:
+                # No phone numbers, just send the message without file
+                await status_message.get_bot().send_message(
                     chat_id=status_message.chat_id,
-                    document=f,
-                    filename=os.path.basename(results_file),
-                    caption=success_text,
+                    text=success_text,
                     reply_markup=keyboard
                 )
             
