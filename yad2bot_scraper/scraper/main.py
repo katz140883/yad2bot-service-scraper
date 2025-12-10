@@ -920,6 +920,15 @@ class Yad2Scraper:
                             if exists:
                                 duplicates_skipped += 1
                                 logger.info(f"⏭️  Listing already in CRM, skipping ({duplicates_skipped} total): {listing_url}")
+                                
+                                # Update progress file with new duplicate count
+                                progress_data['duplicates_skipped'] = duplicates_skipped
+                                try:
+                                    with open(progress_file, 'w', encoding='utf-8') as f:
+                                        json.dump(progress_data, f, ensure_ascii=False, indent=2)
+                                except Exception as e:
+                                    logger.debug(f"Error updating progress after duplicate: {e}")
+                                
                                 continue
                         except Exception as check_error:
                             logger.warning(f"Could not check CRM, continuing with processing: {check_error}")
