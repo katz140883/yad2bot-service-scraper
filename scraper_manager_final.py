@@ -51,7 +51,7 @@ class FinalScraperManager:
         # Create cancel flag files for all possible scraping sessions
         try:
             import glob
-            data_dir = "/root/yad2bot-service-scraper/yad2bot_scraper/data"
+            data_dir = "/home/ubuntu/yad2bot_scraper/data"
             today_str = datetime.now().strftime('%Y-%m-%d')
             
             # Create cancel flags for all possible combinations
@@ -475,7 +475,7 @@ class FinalScraperManager:
             try:
                 import os
                 import glob
-                data_dir = '/root/yad2bot-service-scraper/yad2bot_scraper/data'
+                data_dir = '/home/ubuntu/yad2bot_scraper/data'
                 
                 # Find the most recent checking_progress file
                 progress_files = glob.glob(os.path.join(data_dir, '*_checking_progress.json'))
