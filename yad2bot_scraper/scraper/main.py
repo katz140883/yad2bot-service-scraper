@@ -733,7 +733,7 @@ class Yad2Scraper:
                 '5000': 'TelAviv',      # תל אביב-יפו
                 '3000': 'Jerusalem',    # ירושלים
                 '4000': 'Haifa',        # חיפה
-                '7000': 'BeerSheva',    # באר שבע
+                '9000': 'BeerSheva',    # באר שבע
                 '8300': 'RishonLeZion', # ראשון לציון
                 '7900': 'PetahTikva',   # פתח תקווה
                 '7400': 'Netanya',      # נתניה
@@ -795,16 +795,34 @@ class Yad2Scraper:
                 url = f"{base_url}&page={page}" if page > 1 else base_url
                 logger.info(f"Fetching page {page}: {url}")
                 
-                # Fetch page content
-                html_content = self.fetch_with_zenrows(url)
-                if not html_content:
-                    logger.error(f"Failed to fetch page {page}")
-                    break
+                # Retry logic for fetching and parsing
+                max_retries = 3
+                retry_count = 0
+                nextjs_data = None
                 
-                # Extract Next.js data
-                nextjs_data = self.extract_nextjs_data(html_content)
+                while retry_count < max_retries and not nextjs_data:
+                    # Fetch page content
+                    html_content = self.fetch_with_zenrows(url)
+                    if not html_content:
+                        logger.error(f"Failed to fetch page {page}, attempt {retry_count + 1}/{max_retries}")
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            logger.info(f"Retrying in 2 seconds...")
+                            time.sleep(2)
+                        continue
+                    
+                    # Extract Next.js data
+                    nextjs_data = self.extract_nextjs_data(html_content)
+                    if not nextjs_data:
+                        logger.warning(f"No Next.js data found on page {page}, attempt {retry_count + 1}/{max_retries}")
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            logger.info(f"Retrying in 2 seconds...")
+                            time.sleep(2)
+                
+                # If all retries failed, decide what to do
                 if not nextjs_data:
-                    logger.warning(f"No Next.js data found on page {page}")
+                    logger.error(f"Failed to extract Next.js data from page {page} after {max_retries} attempts")
                     if page >= max_pages:
                         logger.info(f"Reached max_pages ({max_pages}), stopping")
                         break
@@ -977,7 +995,7 @@ class Yad2Scraper:
                 '5000': 'TelAviv',      # תל אביב-יפו
                 '3000': 'Jerusalem',    # ירושלים
                 '4000': 'Haifa',        # חיפה
-                '7000': 'BeerSheva',    # באר שבע
+                '9000': 'BeerSheva',    # באר שבע
                 '8300': 'RishonLeZion', # ראשון לציון
                 '7900': 'PetahTikva',   # פתח תקווה
                 '7400': 'Netanya',      # נתניה

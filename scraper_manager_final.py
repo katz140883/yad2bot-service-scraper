@@ -14,6 +14,7 @@ import glob
 import subprocess
 import logging
 import json
+import csv
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -178,18 +179,24 @@ class FinalScraperManager:
             
             # Clean up today's CSV files to force new scan
             today = datetime.now().strftime('%Y-%m-%d')
-            csv_pattern = f"/root/yad2bot-service-scraper/yad2bot_scraper/data/*{today}*.csv"
+            csv_patterns = [
+                f"/root/yad2bot-service-scraper/yad2bot_scraper/data/*{today}*.csv",
+                f"/home/ubuntu/yad2bot_scraper/data/*{today}*.csv"
+            ]
             
-            # Use asyncio.to_thread for glob.glob (non-blocking)
-            csv_files = await asyncio.to_thread(glob.glob, csv_pattern)
+            all_csv_files = []
+            for csv_pattern in csv_patterns:
+                logger.info(f"[ScraperManager] Looking for CSV files: {csv_pattern}")
+                csv_files = await asyncio.to_thread(glob.glob, csv_pattern)
+                all_csv_files.extend(csv_files)
             
             # Parallel deletion of CSV files
-            if csv_files:
+            if all_csv_files:
                 await asyncio.gather(
-                    *[asyncio.to_thread(os.remove, f) for f in csv_files],
+                    *[asyncio.to_thread(os.remove, f) for f in all_csv_files],
                     return_exceptions=True
                 )
-                logger.info(f"[ScraperManager] Removed {len(csv_files)} CSV files")
+                logger.info(f"[ScraperManager] Removed {len(all_csv_files)} CSV files")
             
             logger.info("[ScraperManager] File cleanup completed")
             
@@ -383,6 +390,20 @@ class FinalScraperManager:
             session['process'] = process
             logger.info(f"[ScraperManager] Started scraper process PID {process.pid}")
             
+            # Start background task to log stderr/stdout
+            async def log_process_output():
+                try:
+                    stdout, stderr = await process.communicate()
+                    if stdout:
+                        logger.info(f"[Scraper STDOUT] {stdout.decode('utf-8', errors='ignore')}")
+                    if stderr:
+                        logger.error(f"[Scraper STDERR] {stderr.decode('utf-8', errors='ignore')}")
+                    logger.info(f"[Scraper] Process exited with code {process.returncode}")
+                except Exception as e:
+                    logger.error(f"[Scraper] Error reading output: {e}")
+            
+            asyncio.create_task(log_process_output())
+            
             # STEP 5: Start monitoring in background (don't await it)
             monitor_task = asyncio.create_task(
                 self._monitor_complete_process(session),
@@ -422,7 +443,7 @@ class FinalScraperManager:
         filter_type = session.get('filter_type')
         process = session['process']
         
-        try:
+        try:  # Main monitoring try block
             logger.info(f"[Monitor] Starting complete process monitoring for user {user_id}")
             
             # PHASE 1: Monitor scraper progress with real-time updates
@@ -442,6 +463,41 @@ class FinalScraperManager:
                 logger.info(f"[Monitor] Sent sticker after scraping")
             except Exception as e:
                 logger.error(f"[Monitor] Error sending sticker: {e}")
+            
+            # ========== CSV VERIFICATION BEFORE PHASE 2 ==========
+            logger.info(f"[Monitor] Verifying CSV content before Phase 2...")
+            
+            # Find the CSV file that was created
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            expected_csv_pattern = f"/home/ubuntu/yad2bot_scraper/data/{city_name}_{mode}_{filter_type}_{today_str}_*.csv"
+            csv_files = glob.glob(expected_csv_pattern)
+            
+            found_listings_count = 0
+            csv_file_path = None
+            
+            if csv_files:
+                # Get the most recently created CSV file
+                csv_file_path = max(csv_files, key=os.path.getmtime)
+                
+                try:
+                    # Count data rows (excluding header)
+                    with open(csv_file_path, 'r', encoding='utf-8') as f:
+                        reader = csv.reader(f)
+                        found_listings_count = sum(1 for row in reader) - 1
+                        logger.info(f"[Monitor] Found {found_listings_count} data rows in CSV: {csv_file_path}")
+                except Exception as e:
+                    logger.error(f"[Monitor] Error reading CSV for verification: {e}")
+            else:
+                logger.warning(f"[Monitor] No CSV file found matching pattern: {expected_csv_pattern}")
+            
+            # Store the count for Phase 2 to use
+            self.progress_monitor.csv_listings_count = found_listings_count
+            
+            # ========== ALWAYS CONTINUE TO PHASE 2 ==========
+            if found_listings_count == 0:
+                logger.warning(f"[Monitor] CSV is empty ({found_listings_count} listings). Phase 2 will show 'no ads to extract'.")
+            else:
+                logger.info(f"[Monitor] {found_listings_count} listings found. Proceeding to Phase 2: Phone Extraction.")
             
             # PHASE 2: Monitor phone extraction progress
             logger.info(f"[Monitor] Starting phone extraction monitoring")
@@ -648,6 +704,17 @@ class FinalScraperManager:
             completion_text = "✅ הסריקה הושלמה" if language == 'hebrew' else "✅ Scraping completed"
             # Removed message update - was causing bot to stop
             pass
+        
+        finally:
+            # ALWAYS remove session from active_sessions, even if there were errors
+            if user_id in self.active_sessions:
+                try:
+                    del self.active_sessions[user_id]
+                    logger.info(f"[Monitor] Removed session for user {user_id} from active_sessions")
+                except Exception as e:
+                    logger.error(f"[Monitor] Error removing session: {e}")
+            else:
+                logger.warning(f"[Monitor] Session for user {user_id} was already removed from active_sessions")
     
     async def run_scraper(self, update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str, filter_type: str, city_code: str = None):
         """Run scraper with callback query - delegates to main method."""
